@@ -1,6 +1,21 @@
 import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react'
 
+const backendProxyTarget = process.env.VITE_DEV_PROXY_TARGET || 'http://127.0.0.1:8080'
+
+const proxyRoutes = ['/api', '/auth', '/actuator', '/swagger-ui', '/v3/api-docs']
+
+const proxy = Object.fromEntries(
+  proxyRoutes.map((route) => [
+    route,
+    {
+      target: backendProxyTarget,
+      changeOrigin: true,
+      secure: false,
+    },
+  ]),
+)
+
 /**
  * Configuración Vite — inventory-frontend
  *
@@ -23,5 +38,6 @@ export default defineConfig({
     port: 5173,
     allowedHosts: true,
     cors: true,
+    proxy,
   },
 })

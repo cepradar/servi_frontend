@@ -11,13 +11,25 @@
  *  - Evita typos dispersos en el código.
  */
 
-/** Fallback dinámico: apunta al origen actual en el puerto 8080.
- *  Útil cuando el frontend y el backend comparten dominio (reverse proxy). */
-const _fallbackApiUrl = `${window.location.protocol}//${window.location.hostname}:8080`;
+/** Normaliza la URL base para evitar slashes finales y permitir mismo origen. */
+const normalizeApiBaseUrl = (value) => {
+  const normalized = (value || '').trim();
+
+  if (!normalized || normalized === '/') {
+    return '';
+  }
+
+  return normalized.endsWith('/') ? normalized.slice(0, -1) : normalized;
+};
+
+/** Fallback por defecto: mismo origen.
+ *  En desarrollo, Vite proxy redirige /api y /auth al backend.
+ *  En servidor, Nginx hace el mismo proxy hacia Spring Boot. */
+const _fallbackApiUrl = '';
 
 export const env = {
   /** URL base del backend API (sin slash al final) */
-  API_BASE_URL: import.meta.env.VITE_API_BASE_URL || _fallbackApiUrl,
+  API_BASE_URL: normalizeApiBaseUrl(import.meta.env.VITE_API_BASE_URL) || _fallbackApiUrl,
 
   /** Modo de ejecución actual: 'development' | 'production' */
   MODE: import.meta.env.MODE,
