@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import api from './utils/axiosConfig'; // Axios con interceptor JWT
-import Modal from './Modal';
+import Modal from './common/Modal';
 import { useNavigate } from 'react-router-dom';
 import { PencilIcon, TrashIcon } from '@heroicons/react/24/outline';
 import DataTable from './DataTable';
