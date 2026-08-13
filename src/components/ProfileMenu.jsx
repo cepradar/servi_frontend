@@ -70,9 +70,7 @@ if (response.data?.byteLength > 0) {
   setProfilePicture(imageUrl);
 }
 
-        const response = await axiosClient.get(`/auth/profile-picture/${username}`, {
-          responseType: 'arraybuffer', timeout: 8000, silent: true,
-        });
+        
         if (response.data?.byteLength > 0) {
           const base64 = btoa(
             new Uint8Array(response.data).reduce((d, b) => d + String.fromCharCode(b), '')
