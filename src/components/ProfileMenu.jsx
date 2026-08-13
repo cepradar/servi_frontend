@@ -47,9 +47,28 @@ function ProfileMenu({ userName }) {
           setLoading(true);
         }
 
-        const cacheKey = `profilePicture:${username}`;
-        const cached = localStorage.getItem(cacheKey);
-        if (cached) { setProfilePicture(cached); setLoading(false); return; }
+        const response = await axiosClient.get(
+  `/auth/profile-picture/${encodeURIComponent(username)}?t=${Date.now()}`,
+  {
+    responseType: 'arraybuffer',
+    timeout: 8000,
+    silent: true,
+    headers: {
+      'Cache-Control': 'no-cache',
+      Pragma: 'no-cache',
+    },
+  }
+);
+
+if (response.data?.byteLength > 0) {
+  const base64 = btoa(
+    new Uint8Array(response.data)
+      .reduce((d, b) => d + String.fromCharCode(b), '')
+  );
+
+  const imageUrl = `data:image/jpeg;base64,${base64}`;
+  setProfilePicture(imageUrl);
+}
 
         const response = await axiosClient.get(`/auth/profile-picture/${username}`, {
           responseType: 'arraybuffer', timeout: 8000, silent: true,
@@ -59,7 +78,6 @@ function ProfileMenu({ userName }) {
             new Uint8Array(response.data).reduce((d, b) => d + String.fromCharCode(b), '')
           );
           const imageUrl = `data:image/jpeg;base64,${base64}`;
-          localStorage.setItem(cacheKey, imageUrl);
           setProfilePicture(imageUrl);
         }
       } catch {
@@ -124,18 +142,29 @@ try {
       toast.success(response.data.message || 'Foto actualizada.');
       const username = localStorage.getItem('username');
       if (username) {
-        const cacheKey = `profilePicture:${username}`;
-        const picResponse = await axiosClient.get(`/auth/profile-picture/${username}`, {
-          responseType: 'arraybuffer', timeout: 8000, silent: true,
-        });
-        if (picResponse.data?.byteLength > 0) {
-          const base64 = btoa(
-            new Uint8Array(picResponse.data).reduce((d, b) => d + String.fromCharCode(b), '')
-          );
-          const imageUrl = `data:image/jpeg;base64,${base64}`;
-          localStorage.setItem(cacheKey, imageUrl);
-          setProfilePicture(imageUrl);
-        }
+        const picResponse = await axiosClient.get(
+  `/auth/profile-picture/${encodeURIComponent(username)}?t=${Date.now()}`,
+  {
+    responseType: 'arraybuffer',
+    timeout: 8000,
+    silent: true,
+    headers: {
+      'Cache-Control': 'no-cache',
+      Pragma: 'no-cache',
+    },
+  }
+);
+
+if (picResponse.data?.byteLength > 0) {
+  const base64 = btoa(
+    new Uint8Array(picResponse.data)
+      .reduce((d, b) => d + String.fromCharCode(b), '')
+  );
+
+  const imageUrl = `data:image/jpeg;base64,${base64}`;
+
+  setProfilePicture(imageUrl);
+}
       }
     } catch {
       toast.error('Error al actualizar la foto de perfil.');
