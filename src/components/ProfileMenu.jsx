@@ -106,9 +106,16 @@ function ProfileMenu({ userName }) {
     const token = localStorage.getItem('authToken');
     if (!token) { navigate('/login'); return; }
 
-    const file = event.target.files[0];
-    if (!file) return;
+    const originalFile = event.target.files[0];
+if (!originalFile) return;
 
+let file;
+try {
+  file = await compressImage(originalFile, 1600, 0.8);
+} catch {
+  toast.error('No fue posible procesar la imagen.');
+  return;
+}
     const formData = new FormData();
     formData.append('file', file);
 
@@ -134,6 +141,52 @@ function ProfileMenu({ userName }) {
       toast.error('Error al actualizar la foto de perfil.');
     }
   };
+
+  const compressImage = (file, maxWidth = 1600, quality = 0.8) =>
+  new Promise((resolve, reject) => {
+    if (!file.type.startsWith('image/')) {
+      reject(new Error('El archivo no es una imagen'));
+      return;
+    }
+
+    const image = new Image();
+    const objectUrl = URL.createObjectURL(file);
+
+    image.onload = () => {
+      URL.revokeObjectURL(objectUrl);
+
+      const scale = Math.min(1, maxWidth / image.width);
+      const canvas = document.createElement('canvas');
+      canvas.width = Math.round(image.width * scale);
+      canvas.height = Math.round(image.height * scale);
+
+      canvas.getContext('2d').drawImage(image, 0, 0, canvas.width, canvas.height);
+
+      canvas.toBlob(
+        (blob) => {
+          if (!blob) {
+            reject(new Error('No se pudo comprimir la imagen'));
+            return;
+          }
+
+          resolve(
+            new File([blob], 'profile-picture.jpg', {
+              type: 'image/jpeg',
+            })
+          );
+        },
+        'image/jpeg',
+        quality
+      );
+    };
+
+    image.onerror = () => {
+      URL.revokeObjectURL(objectUrl);
+      reject(new Error('No se pudo leer la imagen'));
+    };
+
+    image.src = objectUrl;
+  });
 
   // Avatar placeholder como data URL (SVG)
   const defaultProfilePicture = 'data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="%23999"><circle cx="12" cy="8" r="4"/><path d="M12 14c-6 0-8 3-8 3v3h16v-3s-2-3-8-3z"/></svg>';
