@@ -549,14 +549,46 @@ function LandingPage() {
       )}
 
       {whatsappLink && (
-        <div className="fixed bottom-16 right-6 z-50 flex items-end gap-3">
-          <div className="relative"></div>
+        <div className="fixed bottom-16 right-6 z-50 flex items-center gap-3">
+          <div
+            className="relative mascot-wrapper"
+            onMouseEnter={() => {
+              setShowMascot(true);
+              if (mascotTimeoutRef.current) clearTimeout(mascotTimeoutRef.current);
+            }}
+            onMouseLeave={() => {
+              // permitir que la animación siga su curso
+              if (mascotTimeoutRef.current) clearTimeout(mascotTimeoutRef.current);
+              mascotTimeoutRef.current = setTimeout(() => setShowMascot(false), 800);
+            }}
+          >
+            {showMascot && (
+              <div className="mascot-bubble" role="status">
+                <span>Escríbenos por WhatsApp</span>
+              </div>
+            )}
+            <div className="mascot-icon" aria-label="Washo, asistente de WhatsApp">
+              <img
+                src="/washo.png"
+                alt="Washo"
+                className="h-full w-full object-contain washo-idle"
+                onError={(e) => {
+                  e.currentTarget.style.display = 'none';
+                }}
+              />
+            </div>
+          </div>
           <a
             href={whatsappLink}
-            className="whatsapp-pulse flex h-14 w-14 items-center justify-center rounded-full bg-emerald-500 text-white shadow-2xl transition hover:-translate-y-1"
+            className="whatsapp-pulse whatsapp-button rounded-full bg-emerald-500 text-white shadow-2xl transition hover:-translate-y-1"
             aria-label="WhatsApp"
+            target="_blank"
+            rel="noopener noreferrer"
           >
-            WA
+            <svg className="whatsapp-icon" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden>
+              <path d="M20.52 3.48A11.9 11.9 0 0 0 12 0C5.373 0 .002 5.372 0 12c0 2.116.553 4.18 1.602 6.018L0 24l6.262-1.602A11.93 11.93 0 0 0 12 24c6.627 0 12-5.372 12-12 0-3.206-1.25-6.213-3.48-8.52z" fill="#25D366"/>
+              <path d="M17.472 14.382c-.297-.148-1.758-.867-2.03-.967-.272-.1-.47-.148-.67.15-.198.297-.767.967-.94 1.166-.173.198-.347.223-.644.074-.297-.148-1.255-.462-2.39-1.475-.883-.788-1.48-1.761-1.653-2.058-.173-.297-.018-.458.13-.606.134-.133.297-.347.446-.52.148-.173.198-.297.297-.495.099-.198 0-.37-.05-.52-.05-.148-.67-1.612-.92-2.21-.242-.579-.487-.5-.67-.51l-.57-.01c-.198 0-.52.074-.793.37-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.878 1.213 3.077.148.198 2.095 3.2 5.077 4.487 2.98 1.287 2.98.858 3.517.806.538-.05 1.758-.718 2.006-1.413.248-.695.248-1.29.173-1.413-.074-.123-.272-.198-.57-.347z" fill="#fff"/>
+            </svg>
           </a>
         </div>
       )}
