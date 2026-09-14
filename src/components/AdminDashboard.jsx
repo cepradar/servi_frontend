@@ -1,6 +1,7 @@
 import React from 'react';
 import SalesTrendChart from './charts/SalesTrendChart';
 import TopProductsBar from './charts/TopProductsBar';
+import { formatCurrency } from './utils/currency';
 
 function Kpi({ label, value, suffix }) {
   const formatted = typeof value === 'number' || (value && value.scale !== undefined) ?
@@ -17,7 +18,7 @@ export default function AdminDashboard({ data }) {
   return (
     <div className="space-y-4">
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-        <Kpi label="Valor inventario" value={data.totalInventoryValue ? new Intl.NumberFormat('es-ES', { style: 'currency', currency: 'USD' }).format(data.totalInventoryValue) : '0'} />
+        <Kpi label="Valor inventario (COP)" value={data.totalInventoryValue == null ? 'No disponible' : formatCurrency(data.totalInventoryValue)} />
         <Kpi label="Productos" value={data.totalProducts} />
         <Kpi label="Servicios pendientes" value={data.pendingServices} />
       </div>
@@ -34,9 +35,10 @@ export default function AdminDashboard({ data }) {
 
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
         <div className="bg-white p-4 rounded shadow">
-          <h3 className="font-semibold">Resumen de ventas</h3>
-          <div className="mt-2 text-lg">Mes actual: {data.salesThisMonth ? new Intl.NumberFormat('es-ES', { style: 'currency', currency: 'USD' }).format(data.salesThisMonth) : '-'}</div>
-          <div className="text-sm text-gray-500">Mes anterior: {data.salesLastMonth ? new Intl.NumberFormat('es-ES', { style: 'currency', currency: 'USD' }).format(data.salesLastMonth) : '-'}</div>
+          <h3 className="font-semibold">Ventas por mes</h3>
+          <div className="mt-2 text-lg">Mes actual: {formatCurrency(data.salesThisMonth)}</div>
+          <div className="text-sm text-gray-500">Mes anterior: {formatCurrency(data.salesLastMonth)}</div>
+          <p className="text-xs text-gray-400 mt-3">Los valores corresponden a ventas registradas, no al valor total del inventario.</p>
         </div>
 
         <div className="bg-white p-4 rounded shadow">
