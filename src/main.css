@@ -9,6 +9,90 @@ body {
   font-family: 'Space Grotesk', system-ui, -apple-system, "Segoe UI", sans-serif;
 }
 
+.landing-page {
+  --landing-ink: #0f172a;
+  --landing-muted: #64748b;
+  --landing-line: rgba(148, 163, 184, 0.28);
+  --landing-shadow: 0 22px 55px rgba(15, 23, 42, 0.11);
+}
+
+.landing-header {
+  border-bottom: 1px solid transparent;
+}
+
+.landing-logo {
+  box-shadow: 0 12px 28px rgba(15, 23, 42, 0.1);
+}
+
+.landing-kicker {
+  color: var(--landing-muted);
+  font-size: 0.68rem;
+  font-weight: 600;
+  letter-spacing: 0.18em;
+  line-height: 1.25;
+  text-transform: uppercase;
+}
+
+.landing-panel {
+  box-shadow: var(--landing-shadow);
+}
+
+.landing-carousel {
+  touch-action: pan-y;
+}
+
+.category-list {
+  max-height: min(48vh, 22rem);
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  padding: 0.2rem 0.45rem 0.4rem 0.1rem;
+  scrollbar-gutter: stable;
+}
+
+.category-list:focus-visible {
+  outline: 3px solid rgba(14, 165, 233, 0.35);
+  outline-offset: 4px;
+}
+
+.category-list::-webkit-scrollbar {
+  width: 0.45rem;
+}
+
+.category-list::-webkit-scrollbar-thumb {
+  background: rgba(100, 116, 139, 0.38);
+  border-radius: 999px;
+}
+
+.landing-card {
+  border-color: var(--landing-line);
+  box-shadow: 0 10px 28px rgba(15, 23, 42, 0.06);
+}
+
+.landing-card--dark {
+  box-shadow: 0 18px 40px rgba(15, 23, 42, 0.2);
+}
+
+.landing-primary-button,
+.landing-secondary-button,
+.landing-success-button,
+.landing-accent-button {
+  transition-duration: 180ms;
+}
+
+.landing-primary-button:hover,
+.landing-success-button:hover,
+.landing-accent-button:hover {
+  transform: translateY(-2px);
+}
+
+.landing-primary-button:focus-visible,
+.landing-secondary-button:focus-visible,
+.landing-success-button:focus-visible,
+.landing-accent-button:focus-visible {
+  outline: 3px solid rgba(14, 165, 233, 0.35);
+  outline-offset: 3px;
+}
+
 @keyframes float-slow {
   0%, 100% { transform: translate3d(0, 0, 0); }
   50% { transform: translate3d(0, -18px, 0); }
@@ -161,6 +245,25 @@ body {
 }
 
 @media (max-width: 640px) {
+  .landing-header {
+    align-items: stretch;
+    flex-direction: column;
+    gap: 1rem;
+  }
+
+  .landing-header nav {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    width: 100%;
+  }
+
+  .landing-header nav a,
+  .landing-header nav button {
+    padding: 0.55rem 0.8rem;
+    font-size: 0.75rem;
+    text-align: center;
+  }
+
   .mascot-bubble {
     font-size: 0.8rem;
   }
@@ -168,5 +271,16 @@ body {
   .mascot-icon {
     width: 62px;
     height: 62px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    scroll-behavior: auto !important;
+    transition-duration: 0.01ms !important;
   }
 }

@@ -26,9 +26,11 @@ function LandingPage() {
   const [registerSuccess, setRegisterSuccess] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const dragStartX = useRef(0);
+  const dragStartY = useRef(0);
+  const verticalGestureRef = useRef(false);
   const mascotTimeoutRef = useRef(null);
 
-  const { companyInfo, logoUrl, loading: companyLoading } = useCompanyInfo('logo2');
+  const { companyInfo, loading: companyLoading } = useCompanyInfo('logo2');
 
   useEffect(() => {
     if (!companyLoading) setStatus(companyInfo ? 'ready' : 'error');
@@ -107,20 +109,31 @@ function LandingPage() {
     };
   }, [whatsappLink]);
 
-  const handleDragStart = (clientX) => {
+  const handleDragStart = (clientX, clientY) => {
     dragStartX.current = clientX;
+    dragStartY.current = clientY;
+    verticalGestureRef.current = false;
     setDragOffset(0);
     setIsDragging(true);
   };
 
-  const handleDragMove = (clientX) => {
+  const handleDragMove = (clientX, clientY) => {
     if (!isDragging) return;
-    const delta = clientX - dragStartX.current;
-    setDragOffset(delta);
+    const deltaX = clientX - dragStartX.current;
+    const deltaY = clientY - dragStartY.current;
+    if (!verticalGestureRef.current && Math.abs(deltaY) > Math.abs(deltaX) && Math.abs(deltaY) > 8) {
+      verticalGestureRef.current = true;
+    }
+    if (!verticalGestureRef.current) setDragOffset(deltaX);
   };
 
   const handleDragEnd = () => {
     if (!isDragging) return;
+    if (verticalGestureRef.current) {
+      setDragOffset(0);
+      setIsDragging(false);
+      return;
+    }
     if (dragOffset > 80) {
       goToSlide(activeSlide - 1);
     } else if (dragOffset < -80) {
@@ -131,39 +144,40 @@ function LandingPage() {
   };
 
   return (
-    <div className="relative h-screen overflow-hidden bg-slate-50 text-slate-900">
+    <div className="landing-page relative min-h-[100dvh] overflow-x-hidden bg-slate-50 text-slate-900">
       <div className="pointer-events-none absolute inset-0">
         <div className="float-slow absolute -top-24 right-10 h-56 w-56 rounded-full bg-amber-200/60 blur-3xl" />
         <div className="float-medium absolute bottom-0 left-[-6rem] h-72 w-72 rounded-full bg-sky-200/60 blur-3xl" />
         <div className="float-fast absolute bottom-10 right-[-5rem] h-64 w-64 rounded-full bg-emerald-200/50 blur-3xl" />
       </div>
-      <div className="relative h-full bg-[radial-gradient(circle_at_top,_#f8fafc_0%,_#eef2f7_55%,_#e2e8f0_100%)]">
-        <header className="mx-auto flex w-full max-w-6xl items-center justify-between px-6 py-6 md:px-10">
+      <div className="relative flex min-h-[100dvh] flex-col bg-[radial-gradient(circle_at_top,_#f8fafc_0%,_#eef2f7_55%,_#e2e8f0_100%)]">
+        <header className="landing-header mx-auto flex w-full max-w-6xl items-center justify-between px-6 py-5 md:px-10">
           <div className="flex items-center gap-4">
-            <div className="flex h-14 w-14 items-center justify-center overflow-hidden rounded-2xl bg-white shadow-lg">
+            <div className="landing-logo flex h-14 w-14 items-center justify-center overflow-hidden rounded-2xl bg-white">
               <img src="/sp-logo.png" alt={title} className="h-full w-full object-contain" />
             </div>
             <div>
-              <h1 className="text-xl font-semibold text-slate-900">{title}</h1>
+              <p className="landing-kicker">Servicio técnico</p>
+              <h1 className="text-lg font-semibold text-slate-900 md:text-xl">{title}</h1>
             </div>
           </div>
-          <div className="flex items-center gap-3">
+          <nav className="flex items-center gap-2 md:gap-3" aria-label="Acciones principales">
             <Link
               to="/login"
-              className="rounded-full border border-slate-300 px-5 py-2.5 text-sm font-semibold text-slate-700 transition hover:border-slate-400"
+              className="landing-secondary-button rounded-full border border-slate-300 px-4 py-2.5 text-sm font-semibold text-slate-700 transition md:px-5"
             >
-              Iniciar sesion
+              Iniciar sesión
             </Link>
             <button
               onClick={() => setShowRegisterModal(true)}
-              className="rounded-full bg-slate-900 px-5 py-2.5 text-sm font-semibold text-white shadow-lg transition hover:-translate-y-0.5 hover:bg-slate-800"
+              className="landing-primary-button rounded-full bg-slate-900 px-4 py-2.5 text-sm font-semibold text-white transition md:px-5"
             >
               Crear cuenta
             </button>
-          </div>
+          </nav>
         </header>
-        <section className="relative mx-auto flex h-[calc(100%-96px)] w-full max-w-6xl flex-col px-6 pb-8 md:px-10">
-          <div className="relative flex-1 overflow-hidden rounded-[2.5rem] border border-slate-200 bg-white/70 shadow-xl shadow-slate-200/60 backdrop-blur">
+        <section className="relative mx-auto flex min-h-0 w-full max-w-6xl flex-1 flex-col px-4 pb-6 sm:px-6 md:px-10 md:pb-8">
+          <div className="landing-panel relative flex min-h-[560px] flex-1 overflow-hidden rounded-[2rem] border border-slate-200 bg-white/70 backdrop-blur">
             <div
               className="absolute inset-0"
               style={{
@@ -173,58 +187,58 @@ function LandingPage() {
             />
 
             <div
-              className={`flex h-full select-none ${
+              className={`landing-carousel flex h-full w-full min-w-0 select-none ${
                 isDragging ? 'cursor-grabbing transition-none' : 'cursor-grab transition-transform duration-500 ease-out'
               }`}
               style={{ transform: `translateX(calc(-${activeSlide * 100}% + ${dragOffset}px))` }}
-              onMouseDown={(event) => handleDragStart(event.clientX)}
-              onMouseMove={(event) => handleDragMove(event.clientX)}
+              onMouseDown={(event) => handleDragStart(event.clientX, event.clientY)}
+              onMouseMove={(event) => handleDragMove(event.clientX, event.clientY)}
               onMouseUp={handleDragEnd}
               onMouseLeave={() => { handleDragEnd(); setIsPaused(false); }}
-              onTouchStart={(event) => handleDragStart(event.touches[0].clientX)}
-              onTouchMove={(event) => handleDragMove(event.touches[0].clientX)}
+              onTouchStart={(event) => handleDragStart(event.touches[0].clientX, event.touches[0].clientY)}
+              onTouchMove={(event) => handleDragMove(event.touches[0].clientX, event.touches[0].clientY)}
               onTouchEnd={handleDragEnd}
               onMouseEnter={() => setIsPaused(true)}
               onTouchStartCapture={() => setIsPaused(true)}
               onTouchEndCapture={() => setIsPaused(false)}
             >
-              <div className="flex h-full w-full flex-shrink-0 flex-col justify-between px-8 py-8 md:px-12">
+              <div className="flex h-full min-w-0 flex-[0_0_100%] flex-col justify-between gap-8 overflow-y-auto px-6 py-7 md:px-12 md:py-8">
                 <div className="space-y-4">
-                  <h2 className="text-3xl font-semibold leading-tight text-slate-900 md:text-4xl">
-                    {heroTitle.toUpperCase()}
+                  <h2 className="max-w-2xl text-3xl font-semibold leading-tight text-slate-900 md:text-5xl">
+                    {heroTitle}
                   </h2>
-                  <p className="text-sm font-semibold uppercase tracking-[0.35em] text-slate-500">
+                  <p className="landing-kicker text-slate-500">
                     {heroSubtitle}
                   </p>
                 </div>
                 <div className="grid gap-5 md:grid-cols-2">
-                  <div className="rounded-3xl border border-slate-200 bg-white/80 p-4 text-sm text-slate-700">
-                    <p className="text-xs uppercase tracking-[0.3em] text-slate-400">Atendemos</p>
+                  <div className="landing-card rounded-3xl border border-slate-200 bg-white/80 p-4 text-sm text-slate-700">
+                    <p className="landing-kicker text-slate-400">Atendemos</p>
                     <p className="mt-2 text-base font-semibold text-slate-900">Hogares, comercios y contratos corporativos</p>
                     <p className="mt-2 text-xs text-slate-600">
                       {companyInfo?.direccion ? `Base operativa: ${companyInfo.direccion}` : 'Atencion inmediata en tu zona.'}
                     </p>
                   </div>
-                  <div className="rounded-3xl border border-slate-200 bg-white/80 p-4 text-sm text-slate-700">
-                    <p className="text-xs uppercase tracking-[0.3em] text-slate-400">Respuesta rapida</p>
+                  <div className="landing-card rounded-3xl border border-slate-200 bg-white/80 p-4 text-sm text-slate-700">
+                    <p className="landing-kicker text-slate-400">Respuesta rápida</p>
                     <p className="mt-2 text-base font-semibold text-slate-900">Citas priorizadas y seguimiento digital</p>
                   </div>
                 </div>
               </div>
 
-              <div className="flex h-full w-full flex-shrink-0 flex-col justify-between px-8 py-8 md:px-12">
+              <div className="flex h-full min-w-0 flex-[0_0_100%] flex-col gap-6 overflow-hidden px-6 py-7 md:px-12 md:py-8">
                 <div>
-                  <p className="text-xs uppercase tracking-[0.4em] text-slate-400">Categorias</p>
+                  <p className="landing-kicker text-slate-400">Categorías</p>
                   <h3 className="mt-3 text-3xl font-semibold text-slate-900">Equipos que cubrimos</h3>
                   <p className="mt-2 text-sm text-slate-600">
                     Tecnicos especializados por linea y disponibilidad inmediata.
                   </p>
                 </div>
-                <div className="grid gap-3 md:grid-cols-4">
+                <div className="category-list grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4" aria-label="Categorías de equipos atendidos">
                   {categories.map((category) => (
                     <div
                       key={category.name}
-                      className={`group rounded-3xl border border-slate-200 bg-gradient-to-br ${category.tone} p-4 shadow-sm transition hover:-translate-y-1 hover:shadow-lg`}
+                      className={`landing-card min-h-36 group rounded-3xl border border-slate-200 bg-gradient-to-br ${category.tone} p-4 transition hover:-translate-y-1`}
                     >
                       <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-white/80 text-base font-semibold text-slate-700">
                         {category.name.charAt(0)}
@@ -239,11 +253,11 @@ function LandingPage() {
                 </div>
               </div>
 
-              <div className="flex h-full w-full flex-shrink-0 flex-col gap-3 px-6 py-5 md:px-8">
+              <div className="flex h-full min-w-0 flex-[0_0_100%] flex-col gap-3 overflow-y-auto px-6 py-5 md:px-8">
                 <div className="flex flex-1 flex-col gap-3 md:flex-row">
                   <div className="flex h-full flex-1 flex-col justify-between rounded-[2.5rem] bg-white p-4 shadow-xl shadow-slate-200/60">
                     <div>
-                      <p className="text-xs uppercase tracking-[0.35em] text-slate-400">Servicios</p>
+                      <p className="landing-kicker text-slate-400">Servicios</p>
                       <h3 className="mt-2 text-base font-semibold text-slate-900">Especialistas en linea blanca</h3>
                       <p className="mt-2 text-[10px] text-slate-600">
                         Nuestro equipo combina diagnostico tecnico, repuestos garantizados y seguimiento en tiempo real.
@@ -260,22 +274,22 @@ function LandingPage() {
                     <div className="mt-3 flex flex-wrap gap-2">
                       <Link
                         to="/login"
-                        className="rounded-full bg-emerald-500 px-4 py-2 text-[10px] font-semibold text-white shadow-lg transition hover:-translate-y-0.5 hover:bg-emerald-400"
+                        className="landing-success-button rounded-full bg-emerald-500 px-4 py-2 text-[10px] font-semibold text-white transition"
                       >
                         Solicitar atencion
                       </Link>
                       <a
                         href={companyInfo?.sitioWeb || '#'}
-                        className="rounded-full border border-slate-300 px-4 py-2 text-[10px] font-semibold text-slate-700 transition hover:border-slate-400"
+                        className="landing-secondary-button rounded-full border border-slate-300 px-4 py-2 text-[10px] font-semibold text-slate-700 transition"
                       >
                         {companyInfo?.sitioWeb ? 'Ver cobertura' : 'Cobertura nacional'}
                       </a>
                     </div>
                   </div>
 
-                  <div className="flex h-full w-full max-w-xs flex-col justify-between rounded-[2.5rem] bg-slate-900 p-4 text-white shadow-xl shadow-slate-200/60">
+                  <div className="landing-card landing-card--dark flex h-full w-full max-w-xs flex-col justify-between rounded-[2rem] bg-slate-900 p-4 text-white">
                     <div>
-                      <p className="text-xs uppercase tracking-[0.35em] text-slate-400">Contacto rapido</p>
+                      <p className="landing-kicker text-slate-400">Contacto rápido</p>
                       <h3 className="mt-2 text-base font-semibold">Solicita presupuesto</h3>
                       <p className="mt-2 text-[10px] text-slate-300">
                         Completa el formulario y te llamamos en minutos.
@@ -285,21 +299,24 @@ function LandingPage() {
                       <input
                         type="text"
                         placeholder="Nombre completo"
+                        aria-label="Nombre completo"
                         className="w-full rounded-2xl border border-white/10 bg-white/10 px-3 py-2 text-[10px] text-white placeholder:text-slate-400 focus:border-white/30 focus:outline-none"
                       />
                       <input
                         type="text"
-                        placeholder="Telefono"
+                        placeholder="Teléfono"
+                        aria-label="Teléfono"
                         className="w-full rounded-2xl border border-white/10 bg-white/10 px-3 py-2 text-[10px] text-white placeholder:text-slate-400 focus:border-white/30 focus:outline-none"
                       />
                       <input
                         type="text"
                         placeholder="Tipo de equipo"
+                        aria-label="Tipo de equipo"
                         className="w-full rounded-2xl border border-white/10 bg-white/10 px-3 py-2 text-[10px] text-white placeholder:text-slate-400 focus:border-white/30 focus:outline-none"
                       />
                       <button
                         type="button"
-                        className="w-full rounded-2xl bg-amber-400 px-4 py-2 text-[10px] font-semibold text-slate-900 transition hover:bg-amber-300"
+                        className="landing-accent-button w-full rounded-2xl bg-amber-400 px-4 py-2 text-[10px] font-semibold text-slate-900 transition"
                       >
                         Enviar solicitud
                       </button>
@@ -311,11 +328,11 @@ function LandingPage() {
                 </div>
               </div>
 
-              <div className="flex h-full w-full flex-shrink-0 flex-col justify-between px-6 py-6 md:px-9">
-                <div className="rounded-[2.5rem] border border-slate-200 bg-white p-5 shadow-lg shadow-slate-200/60">
+              <div className="flex h-full min-w-0 flex-[0_0_100%] flex-col justify-between gap-5 overflow-y-auto px-6 py-6 md:px-9">
+                <div className="landing-card rounded-[2rem] border border-slate-200 bg-white p-5">
                   <div className="flex flex-wrap items-center justify-between gap-4">
                     <div>
-                      <p className="text-xs uppercase tracking-[0.35em] text-slate-400">Datos corporativos</p>
+                      <p className="landing-kicker text-slate-400">Datos corporativos</p>
                       <h3 className="mt-2 text-lg font-semibold text-slate-900">{title}</h3>
                     </div>
                     <div className="rounded-full bg-slate-900 px-4 py-2 text-[10px] font-semibold uppercase tracking-[0.3em] text-white">
@@ -377,9 +394,15 @@ function LandingPage() {
       </div>
 
       {showRegisterModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm">
-          <div className="relative mx-4 w-full max-w-md rounded-3xl bg-white p-8 shadow-2xl">
+        <div className="fixed inset-0 z-50 flex items-center justify-center overflow-y-auto bg-black/50 p-3 backdrop-blur-sm sm:p-4" role="presentation">
+          <div
+            className="relative my-3 w-full max-w-md rounded-3xl bg-white p-5 shadow-2xl sm:my-4 sm:p-8"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="register-dialog-title"
+          >
             <button
+              type="button"
               onClick={() => {
                 setShowRegisterModal(false);
                 setRegisterError('');
@@ -387,11 +410,12 @@ function LandingPage() {
                 setRegisterForm({ email: '', password: '', firstName: '', lastName: '', telefono: '', documento: '', tipoDocumentoId: 'CC', direccion: '', ciudad: '' });
               }}
               className="absolute right-4 top-4 text-2xl text-slate-400 hover:text-slate-600"
+              aria-label="Cerrar formulario de registro"
             >
               ×
             </button>
             
-            <h2 className="text-2xl font-bold text-slate-900">Crear cuenta</h2>
+            <h2 id="register-dialog-title" className="text-2xl font-bold text-slate-900">Crear cuenta</h2>
             <p className="mt-2 text-sm text-slate-600">Regístrate como cliente para acceder a nuestros servicios</p>
             
             {registerSuccess ? (
