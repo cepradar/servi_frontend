@@ -5,11 +5,13 @@ import { useToast } from './ui/Toast';
 import { PencilIcon, TrashIcon } from '@heroicons/react/24/outline';
 import DataTable from './DataTable';
 import { usePermissions } from './utils/PermissionsContext';
-import inventoryService from '../api/services/inventoryService';
 import { useProductForm } from '../hooks/useProductForm';
 import { useResourceData } from '../hooks/useResourceData';
+import { useInventoryActions } from '../hooks/useInventoryActions';
 import ProductForm from './inventory/ProductForm';
 import ProductList from './inventory/ProductList';
+import CategoryList from './inventory/CategoryList';
+import CategoryForm from './inventory/CategoryForm';
 
 const ResourceList = ({ data, onEdit, onDelete, onAdd }) => {
   const { permissions } = usePermissions();
@@ -76,6 +78,7 @@ const ResourceList = ({ data, onEdit, onDelete, onAdd }) => {
 
 export default function CrudManager({ resourceType, userRole, onFormStateChange }) {
   const { toast } = useToast();
+  void userRole;
   const { permissions } = usePermissions();
   const can = (c) => permissions.includes(c);
   const canCreate = can('inventory.create');
@@ -99,10 +102,13 @@ export default function CrudManager({ resourceType, userRole, onFormStateChange 
   const [saving, setSaving] = useState(false);
   const [productSearchTerm, setProductSearchTerm] = useState('');
 
-  const apiEndpoints = {
-    products: { list: '/api/products/listar', base: '/api/products', eliminar: '/api/products/eliminar' },
-    categories: { list: '/api/categories/listarCategoria', base: '/api/categories' },
-  };
+  const actions = useInventoryActions({
+    resourceType,
+    reload,
+    getPrevious: (id) => data.find((item) => item.id === id),
+  });
+
+  
 
   const agregarEditarProductos = async (e, type) => {
     e.preventDefault();
@@ -142,41 +148,10 @@ export default function CrudManager({ resourceType, userRole, onFormStateChange 
     setSaving(true);
     try {
       console.log('[CrudManager] Payload enviado:', payload);
-      const response = type === 'products'
-        ? (editingId
-            ? await inventoryService.updateProduct(editingId, payload)
-            : await inventoryService.createProduct(payload))
-        : await api[editingId ? 'put' : 'post'](
-            editingId
-              ? `${apiEndpoints[type].base}/actualizar/${editingId}`
-              : `${apiEndpoints[type].base}/agregar`,
-            payload
-          );
-
-      // 🔔 Registrar evento de auditoría
-      if (resourceType === 'products') {
-        // Usar el ID del producto retornado por el backend (puede diferir del temporal)
-        const productIdReal = response.data?.id || payload.id;
-        const productoAnterior = data.find(item => item.id === editingId);
-        const cantidadInicial = editingId ? (productoAnterior?.quantity ?? payload.quantity) : payload.quantity;
-        const precioInicial = editingId ? (productoAnterior?.price ?? payload.price) : payload.price;
-        await inventoryService.registerProductAudit(
-          productIdReal,
-          editingId ? 'ACTUALIZACION' : 'CREACION',
-          cantidadInicial,
-          payload.quantity,
-          precioInicial,
-          payload.price
-        );
-      }
-
-      toast.success(`${type} ${editingId ? 'actualizado' : 'agregado'} exitosamente.`);
+      await actions.save(payload, editingId);
       resetForm();
-      reload();
     } catch (error) {
       console.error(`Error al ${editingId ? 'actualizar' : 'agregar'} ${type}:`, error);
-      const message = error?.response?.data?.message;
-      toast.error(message || `Error al ${editingId ? 'actualizar' : 'agregar'} ${type}.`);
     } finally {
       setSaving(false);
     }
@@ -185,7 +160,7 @@ export default function CrudManager({ resourceType, userRole, onFormStateChange 
   useEffect(() => {
     const cargarCategorias = async () => {
       try {
-        const response = await api.get(apiEndpoints.categories.list);
+        const response = await api.get('/api/categories/listarCategoria');
         setCategories(response.data);
       } catch (error) {
         console.error('Error al cargar categorías:', error);
@@ -259,33 +234,8 @@ export default function CrudManager({ resourceType, userRole, onFormStateChange 
     setModalMessage(`¿Estás seguro de que quieres eliminar este ${resourceType}?`);
     setModalAction(() => async () => {
       try {
-        // Obtener datos del producto antes de eliminarlo para auditoría
-        const productoAEliminar = data.find(item => item.id === id);
-        
-        if (resourceType === 'products') {
-          await inventoryService.deleteProduct(id);
-        } else {
-          const deleteUrl = `${apiEndpoints[resourceType].eliminar}/${id}`;
-          await api.delete(deleteUrl);
-        }
-
-        // 🔔 Registrar evento de auditoría para eliminación
-        if (resourceType === 'products' && productoAEliminar) {
-          await inventoryService.registerProductAudit(
-            id,
-            'ELIMINACION',
-            productoAEliminar.quantity || 0,
-            productoAEliminar.quantity || 0,
-            productoAEliminar.price || 0,
-            productoAEliminar.price || 0
-          );
-        }
-
-        toast.success(`${resourceType} eliminado exitosamente.`);
-        if (editingId === id) {
-          resetForm();
-        }
-        reload();
+        await actions.remove(id);
+        if (editingId === id) resetForm();
       } catch (error) {
         console.error(`Error al eliminar ${resourceType}:`, error);
         toast.error(`Error al eliminar ${resourceType}.`);
@@ -309,18 +259,25 @@ export default function CrudManager({ resourceType, userRole, onFormStateChange 
     <>
       {showForm ? (
         <div className="space-y-2">
-          <ProductForm
-            resourceType={resourceType}
-            formData={formData}
-            categories={categories}
-            categoriasElectrodomestico={categoriasElectrodomestico}
-            editingId={editingId}
-            handleChange={handleChange}
-            onSubmit={agregarEditarProductos}
-            onCancel={handleCancelEdit}
-            saving={saving}
-            canSubmit={editingId ? canUpdate : canCreate}
-          />
+          {resourceType === 'products' ? (
+            <ProductForm
+              resourceType={resourceType}
+              formData={formData}
+              categories={categories}
+              categoriasElectrodomestico={categoriasElectrodomestico}
+              editingId={editingId}
+              handleChange={handleChange}
+              actions={{ onSubmit: agregarEditarProductos, onCancel: handleCancelEdit }}
+              meta={{ saving, canSubmit: editingId ? canUpdate : canCreate }}
+            />
+          ) : (
+            <CategoryForm
+              formData={formData}
+              handleChange={handleChange}
+              actions={{ onSubmit: agregarEditarProductos, onCancel: handleCancelEdit }}
+              meta={{ saving, canSubmit: editingId ? canUpdate : canCreate }}
+            />
+          )}
           {resourceType === 'products' && editingId && canDelete && (
             <div className="max-w-2xl mx-auto flex justify-end">
               <button
@@ -343,20 +300,14 @@ export default function CrudManager({ resourceType, userRole, onFormStateChange 
             categoriasElectrodomestico={categoriasElectrodomestico}
             searchTerm={productSearchTerm}
             setSearchTerm={setProductSearchTerm}
-            onAdd={handleAdd}
-            onEdit={handleEdit}
-            onDelete={handleDelete}
-            canCreate={canCreate}
-            canUpdate={canUpdate}
-            canDelete={canDelete}
+            actions={{ onAdd: handleAdd, onEdit: handleEdit, onDelete: handleDelete }}
+            permissions={{ create: canCreate, update: canUpdate, delete: canDelete }}
           />
         ) : (
-          <ResourceList
+          <CategoryList
             data={data}
-            userRole={userRole}
-            onEdit={handleEdit}
-            onDelete={handleDelete}
-            onAdd={handleAdd}
+            actions={{ onEdit: handleEdit, onDelete: handleDelete, onAdd: handleAdd }}
+            permissions={{ create: canCreate, update: canUpdate, delete: canDelete }}
           />
         )
       )}

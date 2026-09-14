@@ -52,7 +52,16 @@ axiosClient.interceptors.response.use(
       localStorage.removeItem('username');
       localStorage.removeItem('userSedes');
       localStorage.removeItem('sedeActual');
-      window.location.replace('/login');
+      // Evitar bucles: si ya estamos en /login no volvemos a redirigir
+      try {
+        const currentPath = window.location && window.location.pathname;
+        console.error('[axios] 401 on', error.config?.url, 'currentPath=', currentPath);
+        if (currentPath !== '/login') {
+          window.location.replace('/login');
+        }
+      } catch (e) {
+        // ignore errors when accessing window in some environments
+      }
       return Promise.reject(error);
     }
 

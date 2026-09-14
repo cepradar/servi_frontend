@@ -19,6 +19,7 @@ const IngresoElectrodomestico = lazy(() => import('./IngresoElectrodomestico'));
 const OrdenServicio        = lazy(() => import('./OrdenServicio'));
 const ConfigDashboard      = lazy(() => import('./ConfigDashboard'));
 const ServicioManager      = lazy(() => import('./ServicioManager'));
+const LazyHomeDashboard     = lazy(() => import('./HomeDashboard'));
 
 function ModuleSpinner() {
   return (
@@ -38,7 +39,7 @@ function Dashboard() {
   const [userRole, setUserRole]                       = useState(null);
   const [userName, setUserName]                       = useState(null);
   const [hasActiveForm, setHasActiveForm]             = useState(false);
-  const [pendingModuleChange, setPendingModuleChange] = useState(null);
+  
 
   const { permissions } = usePermissions();
   const { companyInfo, logoUrl: companyLogoUrl } = useCompanyInfo('logo');
@@ -64,7 +65,6 @@ function Dashboard() {
 
     if (role) setUserRole(role);
     if (displayName) setUserName(displayName);
-    else navigate('/login');
   }, [navigate]);
 
   useEffect(() => {
@@ -144,13 +144,11 @@ function Dashboard() {
 
   const handleModuleChange = useCallback((module) => {
     if (hasActiveForm && module !== activeModule) {
-      setPendingModuleChange(module);
       setShowModal(true);
       setModalMessage('Tienes cambios sin guardar. ¿Estás seguro de que quieres salir?');
       setModalAction(() => () => {
         executeModuleChange(module);
         setHasActiveForm(false);
-        setPendingModuleChange(null);
         setShowModal(false);
       });
       return;
@@ -164,22 +162,11 @@ function Dashboard() {
       case 'home':
         return (
           <div className="flex items-center justify-center h-full">
-            <div className="text-center">
-              <div className="mb-8">
-                <div className="w-72 h-72 mx-auto bg-gray-200 rounded-2xl flex items-center justify-center border-2 border-gray-300 overflow-hidden">
-                  {companyLogoUrl ? (
-                    <img
-                      src={companyLogoUrl}
-                      alt={companyInfo?.razonSocial || 'Logo de la empresa'}
-                      className="w-full h-full object-cover"
-                    />
-                  ) : (
-                    <span className="text-gray-500 text-sm font-medium">Logo de la empresa</span>
-                  )}
-                </div>
-              </div>
-              <h1 className="text-3xl font-bold text-gray-800 mb-4">Bienvenido</h1>
-              <p className="text-gray-600">Selecciona una opción en la barra lateral para comenzar</p>
+            <div className="w-full">
+              {/* Home dashboard wrapper: cargará el dashboard según rol */}
+              <React.Suspense fallback={<ModuleSpinner />}>
+                <LazyHomeDashboard />
+              </React.Suspense>
             </div>
           </div>
         );
@@ -244,7 +231,7 @@ function Dashboard() {
       default:
         return null;
     }
-  }, [activeModule, activeInventoryView, userRole, companyLogoUrl, companyInfo]);
+  }, [activeModule, activeInventoryView, userRole, companyLogoUrl, companyInfo, permissions]);
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -304,7 +291,6 @@ function Dashboard() {
           onConfirm={modalAction}
           onCancel={() => {
             setShowModal(false);
-            setPendingModuleChange(null);
           }}
         />
       )}

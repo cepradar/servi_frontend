@@ -7,11 +7,11 @@ export default function ProductForm({
   categoriasElectrodomestico,
   editingId,
   handleChange,
-  onSubmit,
-  onCancel,
-  saving = false,
-  canSubmit = true,
+  actions = {},
+  meta = {},
 }) {
+  const { onSubmit, onCancel } = actions;
+  const { saving = false, canSubmit = true } = meta;
   return (
     <form
       onSubmit={(e) => onSubmit(e, resourceType)}

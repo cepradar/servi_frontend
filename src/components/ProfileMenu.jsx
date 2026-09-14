@@ -70,7 +70,6 @@ if (response.data?.byteLength > 0) {
   setProfilePicture(imageUrl);
 }
 
-        
         if (response.data?.byteLength > 0) {
           const base64 = btoa(
             new Uint8Array(response.data).reduce((d, b) => d + String.fromCharCode(b), '')

@@ -9,12 +9,8 @@ export default function ProductList({
   categoriasElectrodomestico,
   searchTerm,
   setSearchTerm,
-  onAdd,
-  onEdit,
-  onDelete,
-  canCreate,
-  canUpdate,
-  canDelete,
+  actions = {},
+  permissions = {},
 }) {
   const [isMobile, setIsMobile] = useState(false);
 
@@ -77,6 +73,9 @@ export default function ProductList({
   }, [data, isMobile, searchTerm, getCategoryName, getCategoriaElectrodomesticoName]);
 
   if (loading) return <div className="p-8 text-center">Cargando products...</div>;
+
+  const { onAdd, onEdit, onDelete } = actions;
+  const { create: canCreate, update: canUpdate, delete: canDelete } = permissions;
 
   return (
     <div className="p-1 md:p-2">

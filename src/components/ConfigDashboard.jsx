@@ -2,6 +2,7 @@ import React, { useEffect, useMemo, useRef, useState } from 'react';
 import api from './utils/axiosConfig';
 import { usePermissions } from './utils/PermissionsContext';
 import ReportesModule from './ReportesModule';
+import dashboardService from '../api/services/dashboardService';
 import MiscManager from './MiscManager';
 import SedesManager from './SedesManager';
 import {
@@ -85,6 +86,9 @@ export default function ConfigDashboard() {
   const [allPerms, setAllPerms] = useState([]);
   const [rolePerms, setRolePerms] = useState([]);
   const [selectedRole, setSelectedRole] = useState('ADMIN');
+  const [startScreen, setStartScreen] = useState('DASHBOARD');
+  const [configJsonText, setConfigJsonText] = useState('');
+  const [loadingConfig, setLoadingConfig] = useState(false);
   const [roleForm, setRoleForm] = useState({ name: '', color: '#4f46e5', description: '' });
   const [loadingPerms, setLoadingPerms] = useState(false);
   const [expandedModules, setExpandedModules] = useState(() => {
@@ -141,6 +145,20 @@ export default function ConfigDashboard() {
   useEffect(() => {
     if (selectedRole) {
       fetchRolePermissions(selectedRole);
+      (async () => {
+        setLoadingConfig(true);
+        try {
+          const res = await dashboardService.getConfig(selectedRole);
+          if (res?.data) {
+            setStartScreen(res.data.startScreen || 'WELCOME');
+            setConfigJsonText(res.data.configJson || '');
+          }
+        } catch (err) {
+          console.error('Error cargando config dashboard:', err);
+        } finally {
+          setLoadingConfig(false);
+        }
+      })();
       setExpandedModules(() => {
         const s = {};
         MODULE_CONFIG.forEach((m) => { s[m.key] = true; });
@@ -555,6 +573,49 @@ export default function ConfigDashboard() {
               </div>
             </div>
           )}
+
+          {/* Configuración de pantalla de inicio por rol */}
+          <div className="mt-6 p-4 border border-gray-100 rounded bg-gray-50">
+            <h4 className="text-sm font-semibold text-gray-800">Pantalla de inicio por rol</h4>
+            <p className="text-xs text-gray-500 mb-3">Selecciona la pantalla que verán los usuarios de este rol al iniciar sesión.</p>
+            <div className="flex items-center gap-2 mb-2">
+              <label className="text-sm text-gray-700">Rol</label>
+              <select value={selectedRole} onChange={(e) => setSelectedRole(e.target.value)} className="h-8 px-2 border rounded text-sm">
+                {roleOptions.map(r => <option key={r} value={r}>{r}</option>)}
+              </select>
+            </div>
+            <div className="flex items-center gap-2 mb-2">
+              <label className="text-sm text-gray-700">Pantalla inicial</label>
+              <select value={startScreen} onChange={(e) => setStartScreen(e.target.value)} className="h-8 px-2 border rounded text-sm">
+                <option value="DASHBOARD">Dashboard</option>
+                <option value="WELCOME">Bienvenida</option>
+                <option value="CUSTOM">Personalizada (JSON)</option>
+              </select>
+            </div>
+            {startScreen === 'CUSTOM' && (
+              <div className="mb-2">
+                <label className="text-sm text-gray-700">JSON configuración (opcional)</label>
+                <textarea value={configJsonText} onChange={(e) => setConfigJsonText(e.target.value)} rows={4} className="w-full mt-1 p-2 border rounded text-xs font-mono" />
+              </div>
+            )}
+            <div className="flex justify-end">
+              <button
+                onClick={async () => {
+                  try {
+                    const payload = { startScreen, configJson: configJsonText };
+                    await dashboardService.setConfig(selectedRole, payload);
+                    alert('Configuración guardada');
+                  } catch (err) {
+                    console.error('Error al guardar config:', err);
+                    alert('No se pudo guardar la configuración');
+                  }
+                }}
+                className="h-9 px-4 bg-blue-600 hover:bg-blue-700 text-white rounded text-sm"
+              >
+                Guardar pantalla inicio
+              </button>
+            </div>
+          </div>
 
           {activeOption === 'reportes' && (
             <div className="-m-4">
