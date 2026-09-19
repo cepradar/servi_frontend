@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import api from './utils/axiosConfig.jsx';
 import { PencilIcon, TrashIcon, PlusIcon } from '@heroicons/react/24/outline';
+import ActionMenu from './common/ActionMenu';
 import DataTable from './DataTable';
 
 export default function ServiceRepairManager() {
@@ -305,24 +306,17 @@ export default function ServiceRepairManager() {
           {
             key: 'acciones',
             label: 'Acciones',
+            noMenu: true,
             sortable: false,
             filterable: false,
             render: (service) => (
-              <div className="flex justify-center gap-2">
-                <button
-                  onClick={() => handleEdit(service)}
-                  className="bg-yellow-500 hover:bg-yellow-600 text-white p-2 rounded inline-flex"
-                  title="Editar"
-                >
-                  <PencilIcon className="w-4 h-4" />
-                </button>
-                <button
-                  onClick={() => handleDelete(service.id)}
-                  className="bg-red-500 hover:bg-red-600 text-white p-2 rounded inline-flex"
-                  title="Eliminar"
-                >
-                  <TrashIcon className="w-4 h-4" />
-                </button>
+              <div className="flex justify-center items-center gap-1 flex-nowrap">
+                <ActionMenu
+                  onEdit={() => handleEdit(service)}
+                  onDelete={() => handleDelete(service.id)}
+                  canEdit={true}
+                  canDelete={true}
+                />
               </div>
             )
           }

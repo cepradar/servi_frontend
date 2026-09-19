@@ -1,4 +1,7 @@
 import React from 'react';
+import FormField from '../common/FormField';
+import { BtnPrimary, BtnSecondary } from '../common/Buttons';
+import Spinner from '../ui/Spinner';
 
 export default function ProductForm({
   resourceType,
@@ -16,6 +19,7 @@ export default function ProductForm({
     <form
       onSubmit={(e) => onSubmit(e, resourceType)}
       className="max-w-2xl mx-auto bg-white border border-gray-300 rounded-lg shadow-md p-4 md:p-5"
+      noValidate
     >
       <h2 className="font-bold text-gray-800 text-lg md:text-xl mb-3">
         {editingId ? `Editar ${resourceType === 'products' ? 'Producto' : 'Categoría'}` : `Crear ${resourceType === 'products' ? 'Producto' : 'Categoría'}`}
@@ -24,24 +28,22 @@ export default function ProductForm({
       <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
         {resourceType === 'products' ? (
           <>
-            <div className="form-group">
-              <label htmlFor="id" className="block text-xs font-semibold text-gray-700 mb-1">
-                ID del Producto <span className="text-red-500">*</span>
-              </label>
+            <FormField id="id" label="ID del Producto" required>
               <input
                 id="id"
                 type="text"
                 name="id"
                 value={formData.id || ''}
                 onChange={handleChange}
-                className="w-full px-2 py-1 text-xs border border-gray-300 rounded focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-transparent transition-all"
+                className="w-full px-3 py-2 text-sm border border-gray-300 rounded focus:ring-2 focus:ring-blue-500"
                 placeholder="Ej: PROD-001"
                 required
                 readOnly={!!editingId}
                 disabled={!!editingId}
+                aria-invalid={false}
               />
-              {editingId && <p className="text-[11px] text-gray-500 mt-1">El ID no puede modificarse una vez creado</p>}
-            </div>
+              {editingId && <p className="text-xs text-gray-500 mt-1">El ID no puede modificarse una vez creado</p>}
+            </FormField>
 
             <div className="flex items-center gap-2">
               <input
@@ -57,161 +59,134 @@ export default function ProductForm({
               </label>
             </div>
 
-            <div className="form-group">
-              <label htmlFor="name" className="block text-xs font-semibold text-gray-700 mb-1">
-                Nombre del Producto <span className="text-red-500">*</span>
-              </label>
+            <FormField id="name" label="Nombre del Producto" required>
               <input
                 id="name"
                 type="text"
                 name="name"
                 value={formData.name || ''}
                 onChange={handleChange}
-                className="w-full px-2 py-1 text-xs border border-gray-300 rounded focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-transparent transition-all"
+                className="w-full px-3 py-2 text-sm border border-gray-300 rounded focus:ring-2 focus:ring-blue-500"
                 placeholder="Ej: Laptop Dell XPS"
                 required
+                aria-invalid={false}
               />
-            </div>
+            </FormField>
 
-            <div className="form-group">
-              <label htmlFor="description" className="block text-xs font-semibold text-gray-700 mb-1">
-                Descripción
-              </label>
+            <FormField id="description" label="Descripción">
               <textarea
                 id="description"
                 name="description"
                 value={formData.description || ''}
                 onChange={handleChange}
-                className="w-full px-2 py-1 text-xs border border-gray-300 rounded focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-transparent transition-all resize-none"
+                className="w-full px-3 py-2 text-sm border border-gray-300 rounded focus:ring-2 focus:ring-blue-500 resize-none"
                 placeholder="Describe brevemente las características del producto"
                 rows={2}
+                aria-invalid={false}
               />
-            </div>
+            </FormField>
 
-            <div className="form-group">
-              <label htmlFor="categoryId" className="block text-xs font-semibold text-gray-700 mb-1">
-                Categoría <span className="text-red-500">*</span>
-              </label>
+            <FormField id="categoryId" label="Categoría" required>
               <select
                 id="categoryId"
                 name="categoryId"
                 value={formData.categoryId || ''}
                 onChange={handleChange}
-                className="w-full px-2 py-1 text-xs border border-gray-300 rounded focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-transparent transition-all bg-white"
+                className="w-full h-10 px-3 text-sm border border-gray-300 rounded focus:ring-2 focus:ring-blue-500 bg-white"
                 required
+                aria-invalid={false}
               >
                 <option value="">-- Selecciona una categoría --</option>
                 {categories.map((cat) => <option key={cat.id} value={cat.id}>{cat.name}</option>)}
               </select>
-            </div>
+            </FormField>
 
-            <div className="form-group">
-              <label htmlFor="categoriaElectrodomesticoId" className="block text-xs font-semibold text-gray-700 mb-1">
-                Categoría de Electrodoméstico
-              </label>
+            <FormField id="categoriaElectrodomesticoId" label="Categoría de Electrodoméstico">
               <select
                 id="categoriaElectrodomesticoId"
                 name="categoriaElectrodomesticoId"
                 value={formData.categoriaElectrodomesticoId || ''}
                 onChange={handleChange}
-                className="w-full px-2 py-1 text-xs border border-gray-300 rounded focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-transparent transition-all bg-white"
+                className="w-full h-10 px-3 text-sm border border-gray-300 rounded focus:ring-2 focus:ring-blue-500 bg-white"
+                aria-invalid={false}
               >
                 <option value="">-- Selecciona una categoría --</option>
                 {categoriasElectrodomestico.map((cat) => (
                   <option key={cat.id} value={cat.id}>{cat.nombre}</option>
                 ))}
               </select>
-            </div>
+            </FormField>
 
-            <div className="form-group">
-              <label htmlFor="quantity" className="block text-xs font-semibold text-gray-700 mb-1">
-                Cantidad <span className="text-red-500">*</span>
-              </label>
+            <FormField id="quantity" label="Cantidad" required>
               <input
                 id="quantity"
                 type="number"
                 name="quantity"
                 value={formData.quantity || ''}
                 onChange={handleChange}
-                className="w-full px-2 py-1 text-xs border border-gray-300 rounded focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-transparent transition-all"
+                className="w-full px-3 py-2 text-sm border border-gray-300 rounded focus:ring-2 focus:ring-blue-500"
                 placeholder="0"
                 min="0"
                 required
+                aria-invalid={false}
               />
-            </div>
+            </FormField>
 
-            <div className="form-group">
-              <label htmlFor="price" className="block text-xs font-semibold text-gray-700 mb-1">
-                Precio ($) <span className="text-red-500">*</span>
-              </label>
+            <FormField id="price" label="Precio ($)" required>
               <input
                 id="price"
                 type="number"
                 name="price"
                 value={formData.price || ''}
                 onChange={handleChange}
-                className="w-full px-2 py-1 text-xs border border-gray-300 rounded focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-transparent transition-all"
+                className="w-full px-3 py-2 text-sm border border-gray-300 rounded focus:ring-2 focus:ring-blue-500"
                 placeholder="0.00"
                 min="0"
                 step="0.01"
                 required
+                aria-invalid={false}
               />
-            </div>
+            </FormField>
           </>
         ) : (
           <>
-            <div className="form-group">
-              <label htmlFor="name" className="block text-xs font-semibold text-gray-700 mb-1">
-                Nombre de la Categoría <span className="text-red-500">*</span>
-              </label>
+            <FormField id="name" label="Nombre de la Categoría" required>
               <input
                 id="name"
                 type="text"
                 name="name"
                 value={formData.name || ''}
                 onChange={handleChange}
-                className="w-full px-2 py-1 text-xs border border-gray-300 rounded focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-transparent transition-all"
+                className="w-full px-3 py-2 text-sm border border-gray-300 rounded focus:ring-2 focus:ring-blue-500"
                 placeholder="Ej: Electrónica"
                 required
+                aria-invalid={false}
               />
-            </div>
+            </FormField>
 
-            <div className="form-group">
-              <label htmlFor="description" className="block text-xs font-semibold text-gray-700 mb-1">
-                Descripción <span className="text-red-500">*</span>
-              </label>
+            <FormField id="description" label="Descripción" required>
               <textarea
                 id="description"
                 name="description"
                 value={formData.description || ''}
                 onChange={handleChange}
-                className="w-full px-2 py-1 text-xs border border-gray-300 rounded focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-transparent transition-all resize-none"
+                className="w-full px-3 py-2 text-sm border border-gray-300 rounded focus:ring-2 focus:ring-blue-500 resize-none"
                 placeholder="Describe brevemente esta categoría"
                 rows="3"
                 required
+                aria-invalid={false}
               />
-            </div>
+            </FormField>
           </>
         )}
       </div>
-
       <div className="flex flex-col sm:flex-row gap-2 border-t border-gray-200 mt-3 pt-3">
         {canSubmit && (
-          <button
-            type="submit"
-            disabled={saving}
-            className="flex-1 h-9 px-3 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-all text-sm font-medium disabled:opacity-60 disabled:cursor-not-allowed"
-          >
-            {saving ? 'Guardando...' : (editingId ? '💾 Actualizar' : '✚ Crear')}
-          </button>
+          <BtnPrimary type="submit" className="flex-1" disabled={saving}>
+            {saving ? (<><Spinner size="sm" className="mr-2" /> Guardando...</>) : (editingId ? '💾 Actualizar' : '✚ Crear')}
+          </BtnPrimary>
         )}
-        <button
-          type="button"
-          onClick={onCancel}
-          className="flex-1 h-9 px-3 bg-gray-300 text-gray-700 rounded-lg hover:bg-gray-400 transition-all text-sm font-medium"
-        >
-          ✕ Cancelar
-        </button>
+        <BtnSecondary type="button" className="flex-1" onClick={onCancel}>✕ Cancelar</BtnSecondary>
       </div>
 
       <p className="text-xs text-gray-500 text-center mt-2">

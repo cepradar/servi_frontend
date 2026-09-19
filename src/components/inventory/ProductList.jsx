@@ -1,5 +1,6 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { PencilIcon, TrashIcon } from '@heroicons/react/24/outline';
+import ActionMenu from '../common/ActionMenu';
 import DataTable from '../DataTable';
 
 export default function ProductList({
@@ -139,28 +140,17 @@ export default function ProductList({
             width: 44,
             headerClassName: 'px-1',
             cellClassName: 'px-1',
+            noMenu: true,
             sortable: false,
             filterable: false,
             render: (item) => (
               <div className="flex justify-center items-center gap-1 flex-nowrap">
-                {canUpdate && (
-                  <button
-                    onClick={() => onEdit(item.id)}
-                    className="inline-flex items-center justify-center bg-yellow-500 hover:bg-yellow-600 text-white p-0.5 rounded transition-colors flex-shrink-0"
-                    title="Editar"
-                  >
-                    <PencilIcon className="w-3 h-3" />
-                  </button>
-                )}
-                {canDelete && (
-                  <button
-                    onClick={() => onDelete(item.id)}
-                    className="inline-flex items-center justify-center bg-red-500 hover:bg-red-600 text-white p-0.5 rounded transition-colors flex-shrink-0"
-                    title="Eliminar"
-                  >
-                    <TrashIcon className="w-3 h-3" />
-                  </button>
-                )}
+                <ActionMenu
+                  onEdit={() => onEdit(item.id)}
+                  onDelete={() => onDelete(item.id)}
+                  canEdit={canUpdate}
+                  canDelete={canDelete}
+                />
               </div>
             )
           }] : [])

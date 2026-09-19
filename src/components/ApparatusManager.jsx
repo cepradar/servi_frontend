@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import api from './utils/axiosConfig.jsx';
-import { PencilIcon, TrashIcon, PlusIcon } from '@heroicons/react/24/outline';
+import { PencilIcon, TrashIcon, PlusIcon, ChevronDownIcon, ChevronUpIcon } from '@heroicons/react/24/outline';
+import ActionMenu from './common/ActionMenu';
 import DataTable from './DataTable';
 
 export default function ApparatusManager() {
@@ -290,24 +291,17 @@ export default function ApparatusManager() {
           {
             key: 'acciones',
             label: 'Acciones',
+            noMenu: true,
             sortable: false,
             filterable: false,
             render: (item) => (
-              <div className="flex justify-center gap-2">
-                <button
-                  onClick={() => handleEdit(item)}
-                  className="bg-yellow-500 hover:bg-yellow-600 text-white p-2 rounded inline-flex"
-                  title="Editar"
-                >
-                  <PencilIcon className="w-4 h-4" />
-                </button>
-                <button
-                  onClick={() => handleDelete(item.id)}
-                  className="bg-red-500 hover:bg-red-600 text-white p-2 rounded inline-flex"
-                  title="Eliminar"
-                >
-                  <TrashIcon className="w-4 h-4" />
-                </button>
+              <div className="flex justify-center items-center gap-1 flex-nowrap">
+                <ActionMenu
+                  onEdit={() => handleEdit(item)}
+                  onDelete={() => handleDelete(item.id)}
+                  canEdit={true}
+                  canDelete={true}
+                />
               </div>
             )
           }

@@ -178,63 +178,70 @@ export default function DataTable({
                   className={`px-2 py-1.5 text-left relative whitespace-nowrap max-w-[200px] ${col.headerClassName || ''}`}
                   style={{ width: colWidth ? `${colWidth}px` : undefined }}
                 >
-                  <div className="flex items-center justify-between gap-1">
-                    <span className="font-semibold text-gray-700 text-xs truncate max-w-[160px]">{col.label}</span>
+                  {(() => null)()}
+                  {(() => {
+                    const hasHeaderControls = !col.noMenu && (col.sortable !== false && col.filterable !== false);
                     
-                    {col.sortable !== false && col.filterable !== false && (
-                      <button
-                        onClick={() => toggleMenu(col.key)}
-                        className="p-0.5 hover:bg-gray-200 rounded transition-colors flex-shrink-0"
-                        title="Opciones"
-                      >
-                        <FunnelIcon className="h-3.5 w-3.5 text-gray-600" />
-                      </button>
-                    )}
-                    
-                    {/* Menú desplegable */}
-                    {openMenu === col.key && (
-                      <div 
-                        ref={menuRef}
-                        className="absolute top-full left-0 mt-1 bg-white border border-gray-300 rounded shadow-lg z-50 min-w-[180px]"
-                      >
-                        <div className="py-0.5">
-                          {col.sortable !== false && (
-                            <>
-                              <button
-                                onClick={() => handleSort(col.key, 'asc')}
-                                className="w-full px-3 py-1.5 text-left text-xs hover:bg-gray-100 flex items-center gap-1.5"
-                              >
-                                <ChevronUpIcon className="h-3.5 w-3.5" />
-                                Ordenar {col.label} ASC
-                              </button>
-                              <button
-                                onClick={() => handleSort(col.key, 'desc')}
-                                className="w-full px-3 py-1.5 text-left text-xs hover:bg-gray-100 flex items-center gap-1.5"
-                              >
-                                <ChevronDownIcon className="h-3.5 w-3.5" />
-                                Ordenar {col.label} DESC
-                              </button>
-                            </>
-                          )}
-                          {col.filterable !== false && (
-                            <>
-                              <div className="border-t border-gray-200 my-0.5"></div>
-                              <div className="px-3 py-1.5">
-                                <input
-                                  type="text"
-                                  placeholder={`Filtrar por ${col.label.toLowerCase()}...`}
-                                  value={columnFilters[col.key] || ''}
-                                  onChange={(e) => handleColumnFilter(col.key, e.target.value)}
-                                  className="w-full px-2 py-1 text-xs border border-gray-300 rounded focus:outline-none focus:ring-1 focus:ring-blue-500"
-                                  onClick={(e) => e.stopPropagation()}
-                                />
-                              </div>
-                            </>
-                          )}
-                        </div>
+                    return (
+                      <div className={`flex items-center ${hasHeaderControls ? 'justify-between' : ''} gap-1`}>
+                        <span className="font-semibold text-gray-700 text-xs truncate max-w-[160px]">{col.label}</span>
+
+                        {hasHeaderControls && (
+                          <button
+                            onClick={() => toggleMenu(col.key)}
+                            className="p-0.5 hover:bg-gray-200 rounded transition-colors flex-shrink-0"
+                            title="Opciones"
+                          >
+                            <FunnelIcon className="h-3.5 w-3.5 text-gray-600" />
+                          </button>
+                        )}
+
+                        {/* Menú desplegable */}
+                        {openMenu === col.key && (
+                          <div 
+                            ref={menuRef}
+                            className="absolute top-full left-0 mt-1 bg-white border border-gray-300 rounded shadow-lg z-50 min-w-[180px]"
+                          >
+                            <div className="py-0.5">
+                              {col.sortable !== false && (
+                                <>
+                                  <button
+                                    onClick={() => handleSort(col.key, 'asc')}
+                                    className="w-full px-3 py-1.5 text-left text-xs hover:bg-gray-100 flex items-center gap-1.5"
+                                  >
+                                    <ChevronUpIcon className="h-3.5 w-3.5" />
+                                    Ordenar {col.label} ASC
+                                  </button>
+                                  <button
+                                    onClick={() => handleSort(col.key, 'desc')}
+                                    className="w-full px-3 py-1.5 text-left text-xs hover:bg-gray-100 flex items-center gap-1.5"
+                                  >
+                                    <ChevronDownIcon className="h-3.5 w-3.5" />
+                                    Ordenar {col.label} DESC
+                                  </button>
+                                </>
+                              )}
+                              {col.filterable !== false && (
+                                <>
+                                  <div className="border-t border-gray-200 my-0.5"></div>
+                                  <div className="px-3 py-1.5">
+                                    <input
+                                      type="text"
+                                      placeholder={`Filtrar por ${col.label.toLowerCase()}...`}
+                                      value={columnFilters[col.key] || ''}
+                                      onChange={(e) => handleColumnFilter(col.key, e.target.value)}
+                                      className="w-full px-2 py-1 text-xs border border-gray-300 rounded focus:outline-none focus:ring-1 focus:ring-blue-500"
+                                      onClick={(e) => e.stopPropagation()}
+                                    />
+                                  </div>
+                                </>
+                              )}
+                            </div>
+                          </div>
+                        )}
                       </div>
-                    )}
-                  </div>
+                    );
+                  })()}
                   <div
                     onMouseDown={(event) => startResize(event, col.key)}
                     className="absolute top-0 right-0 h-full w-2 cursor-col-resize hover:bg-gray-200/70"

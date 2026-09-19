@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useMemo } from "react";
 import api from "./utils/axiosConfig";
 import DataTable from "./DataTable";
+import ActionMenu from './common/ActionMenu';
 import { usePermissions } from './utils/PermissionsContext';
 import { useSedes } from '../context/SedesContext';
 import { BuildingOffice2Icon } from '@heroicons/react/24/outline';
@@ -70,6 +71,35 @@ const SalesModule = () => {
       setVentas([]); // Resetear a array vacío en caso de error
     }
   };
+
+  const descargarVentaPdf = async (ventaId) => {
+    try {
+      const resp = await api.get(`/api/ventas/${ventaId}/pdf`, { responseType: 'blob' });
+      const url = window.URL.createObjectURL(new Blob([resp.data]));
+      const link = document.createElement('a');
+      link.href = url;
+      link.setAttribute('download', `venta_${ventaId}.pdf`);
+      document.body.appendChild(link);
+      link.click();
+      link.parentNode.removeChild(link);
+      window.URL.revokeObjectURL(url);
+    } catch (err) {
+      console.error('Error descargando PDF de venta', err);
+      setError('No se pudo descargar el PDF de la venta');
+    }
+  };
+
+  const anularVenta = async (ventaId) => {
+    if (!confirm('¿Confirma anular esta venta?')) return;
+    try {
+      await api.post(`/api/ventas/${ventaId}/anular`);
+      setSuccessMessage('Venta anulada correctamente');
+      cargarVentas();
+    } catch (err) {
+      console.error('Error anulando venta', err);
+      setError('No se pudo anular la venta');
+    }
+  }
 
   const cargarProductos = async () => {
     try {
@@ -773,8 +803,8 @@ const SalesModule = () => {
           <>
             {/* Tabla de ventas */}
             <DataTable
-                  data={ventas}
-                  columns={[
+              data={ventas}
+              columns={[
                     {
                       key: "fecha",
                       label: "Fecha",
@@ -828,6 +858,26 @@ const SalesModule = () => {
                       sortable: true,
                       filterable: true,
                       render: (venta) => venta.usuarioNombre || "-"
+                    }
+                    ,
+                    {
+                      key: 'acciones',
+                      label: '',
+                      noMenu: true,
+                      render: (venta) => (
+                        <div className="flex justify-end">
+                          <ActionMenu
+                            canEdit={can('ventas.edit')}
+                            canDelete={can('ventas.delete')}
+                            canPrint={can('ventas.print')}
+                            canVoid={can('ventas.void')}
+                            onPrint={() => descargarVentaPdf(venta.id)}
+                            onVoid={() => anularVenta(venta.id)}
+                            onEdit={() => {/* abrir editar venta - pendiente */}}
+                            onDelete={() => {/* eliminar venta - pendiente */}}
+                          />
+                        </div>
+                      )
                     }
                   ]}
               />

@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from "react";
 import api from "./utils/axiosConfig";
 import DataTable from "./DataTable";
+import ActionMenu from './common/ActionMenu';
 import { usePermissions } from './utils/PermissionsContext';
 import { useSedes } from '../context/SedesContext';
 import { BuildingOffice2Icon } from '@heroicons/react/24/outline';
@@ -187,6 +188,18 @@ export default function OrdenServicio() {
       window.URL.revokeObjectURL(url);
     } catch (err) {
       setError('Error al generar el PDF de la orden de servicio');
+    }
+  };
+
+  const handleAnularOrden = async (ordenId) => {
+    if (!ordenId) return;
+    if (!confirm('¿Confirma anular esta orden de servicio?')) return;
+    try {
+      await api.post(`/api/servicios-reparacion/${ordenId}/anular`);
+      setSuccessMessage(`Orden ${ordenId} anulada correctamente`);
+      cargarOrdenes();
+    } catch (err) {
+      setError('No se pudo anular la orden de servicio');
     }
   };
 
@@ -908,6 +921,26 @@ export default function OrdenServicio() {
       key: "fechaIngreso",
       label: "Fecha",
       render: (row) => new Date(row.fechaIngreso).toLocaleDateString()
+    }
+    ,
+    {
+      key: 'acciones',
+      label: '',
+      noMenu: true,
+      render: (row) => (
+        <div className="flex justify-end">
+          <ActionMenu
+            canEdit={can('ordenes.edit')}
+            canDelete={can('ordenes.delete')}
+            canPrint={can('ordenes.print')}
+            canVoid={can('ordenes.void')}
+            onPrint={() => handleDescargarOrdenPdf(row.id)}
+            onVoid={() => handleAnularOrden(row.id)}
+            onEdit={() => {/* abrir edicion orden - pendiente */}}
+            onDelete={() => {/* eliminar orden - pendiente */}}
+          />
+        </div>
+      )
     }
   ];
 

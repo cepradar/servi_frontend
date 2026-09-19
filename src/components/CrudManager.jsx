@@ -4,6 +4,7 @@ import Modal from './common/Modal';
 import { useToast } from './ui/Toast';
 import { PencilIcon, TrashIcon } from '@heroicons/react/24/outline';
 import DataTable from './DataTable';
+import ActionMenu from './common/ActionMenu';
 import { usePermissions } from './utils/PermissionsContext';
 import { useProductForm } from '../hooks/useProductForm';
 import { useResourceData } from '../hooks/useResourceData';
@@ -43,30 +44,19 @@ const ResourceList = ({ data, onEdit, onDelete, onAdd }) => {
             key: 'acciones',
             label: '',
             width: 70,
+            noMenu: true,
             headerClassName: 'px-1',
             cellClassName: 'px-1',
             sortable: false,
             filterable: false,
             render: (item) => (
               <div className="flex justify-center items-center gap-1 flex-nowrap">
-                {canUpdate && (
-                  <button
-                    onClick={() => onEdit(item.id)}
-                    className="inline-flex items-center justify-center bg-yellow-500 hover:bg-yellow-600 text-white p-1 rounded transition-colors flex-shrink-0"
-                    title="Editar"
-                  >
-                    <PencilIcon className="w-3.5 h-3.5" />
-                  </button>
-                )}
-                {canDelete && (
-                  <button
-                    onClick={() => onDelete(item.id)}
-                    className="inline-flex items-center justify-center bg-red-500 hover:bg-red-600 text-white p-1 rounded transition-colors flex-shrink-0"
-                    title="Eliminar"
-                  >
-                    <TrashIcon className="w-3.5 h-3.5" />
-                  </button>
-                )}
+                <ActionMenu
+                  onEdit={() => onEdit(item.id)}
+                  onDelete={() => onDelete(item.id)}
+                  canEdit={canUpdate}
+                  canDelete={canDelete}
+                />
               </div>
             )
           }] : [])

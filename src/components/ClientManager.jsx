@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import api from './utils/axiosConfig.jsx';
 import { PlusIcon, PencilIcon, ChevronDownIcon, ChevronUpIcon } from '@heroicons/react/24/outline';
+import ActionMenu from './common/ActionMenu';
 import DataTable from './DataTable';
 import Modal from './Modal';
 import { usePermissions } from './utils/PermissionsContext';
@@ -541,21 +542,19 @@ export default function ClientManager() {
               key: 'acciones',
               label: '',
               width: 44,
+              noMenu: true,
               headerClassName: 'px-1',
               cellClassName: 'px-1',
               sortable: false,
               filterable: false,
               render: (client) => (
                 <div className="flex justify-center items-center gap-1 flex-nowrap">
-                  {can('clients.update') && (
-                    <button
-                      onClick={() => handleEdit(client)}
-                      className="inline-flex items-center justify-center bg-yellow-500 hover:bg-yellow-600 text-white p-0.5 rounded transition-colors flex-shrink-0"
-                      title="Editar"
-                    >
-                      <PencilIcon className="w-3 h-3" />
-                    </button>
-                  )}
+                  <ActionMenu
+                    onEdit={() => handleEdit(client)}
+                    onDelete={() => handleDelete(client)}
+                    canEdit={can('clients.update')}
+                    canDelete={can('clients.delete')}
+                  />
                 </div>
               )
             }
