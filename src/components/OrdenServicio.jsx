@@ -8,34 +8,23 @@ import { BuildingOffice2Icon } from '@heroicons/react/24/outline';
 
 /**
  * COMPONENTE REFACTORIZADO: OrdenServicio
- * 
- * CAMBIOS:
- * - Eliminada toda lógica de productos embebida
- * - Los productos ahora se manejan en el módulo de Ventas
- * - Una orden puede tener múltiples ventas asociadas
- * - Simplificado: solo maneja datos técnicos de la orden
+ *
+ * Maneja el listado, creación, asignación y respuesta de órdenes.
  */
-export default function OrdenServicio() {
-  const { permissions } = usePermissions();
-  const can = (c) => permissions.includes(c);
-  const { sedes, sedeActual } = useSedes();
-  const [ordenes, setOrdenes] = useState([]);
-  const [ordenesParaAsignar, setOrdenesParaAsignar] = useState([]);
-  const [ordenesTecnico, setOrdenesTecnico] = useState([]);
-  // Ventas asociadas a la orden seleccionada
-  const [ventasOrden, setVentasOrden] = useState([]);
-  const [loadingVentasOrden, setLoadingVentasOrden] = useState(false);
 
-  const [clienteEncontrado, setClienteEncontrado] = useState(null);
-  const [clienteElectrodomesticos, setClienteElectrodomesticos] = useState([]);
-  const [selectedElectrodomestico, setSelectedElectrodomestico] = useState(null);
-  const [activeView, setActiveView] = useState("LISTA");
-  const [selectedOrdenEntrega, setSelectedOrdenEntrega] = useState(null);
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState("");
-  const [successMessage, setSuccessMessage] = useState("");
-  const [tecnicos, setTecnicos] = useState([]);
-  const [tecnicosError, setTecnicosError] = useState("");
+export default function OrdenServicio() {
+  const { sedes, sedeActual } = useSedes();
+  const { hasPermission } = usePermissions();
+
+  const obtenerMensajeError = (error, mensajePredeterminado = 'Ocurrió un error') => {
+    const datos = error?.response?.data;
+    if (typeof datos === 'string' && datos.trim()) return datos;
+    if (datos && typeof datos === 'object') {
+      return datos.message || datos.error || datos.detail || mensajePredeterminado;
+    }
+    return error?.message || mensajePredeterminado;
+  };
+
   const [selectedOrdenAsignar, setSelectedOrdenAsignar] = useState("");
   const [selectedTecnico, setSelectedTecnico] = useState("");
   const [selectedOrdenCierre, setSelectedOrdenCierre] = useState("");
@@ -53,6 +42,21 @@ export default function OrdenServicio() {
   });
   const [clientMatches, setClientMatches] = useState([]);
   const [showClientMatches, setShowClientMatches] = useState(false);
+  const [clienteEncontrado, setClienteEncontrado] = useState(null);
+  const [clienteElectrodomesticos, setClienteElectrodomesticos] = useState([]);
+  const [selectedElectrodomestico, setSelectedElectrodomestico] = useState(null);
+  const [ventasOrden, setVentasOrden] = useState([]);
+  const [loadingVentasOrden, setLoadingVentasOrden] = useState(false);
+  const [ordenDetalle, setOrdenDetalle] = useState(null);
+  const [ordenesTecnico, setOrdenesTecnico] = useState([]);
+  const [ordenes, setOrdenes] = useState([]);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState("");
+  const [successMessage, setSuccessMessage] = useState("");
+  const [tecnicos, setTecnicos] = useState([]);
+  const [tecnicosError, setTecnicosError] = useState("");
+  const [activeView, setActiveView] = useState("LISTA");
+  const [ordenesParaAsignar, setOrdenesParaAsignar] = useState([]);
 
   // Estado para la pestaña "Entregar Orden"
   const [ordenesParaEntregar, setOrdenesParaEntregar] = useState([]);
@@ -174,20 +178,38 @@ export default function OrdenServicio() {
 
   const handleDescargarOrdenPdf = async (ordenId) => {
     if (!ordenId) return;
+    const ventanaPdf = window.open('', '_blank');
     try {
       const response = await api.get(`/api/servicios-reparacion/${ordenId}/pdf`, {
         responseType: 'blob',
       });
       const url = window.URL.createObjectURL(new Blob([response.data], { type: 'application/pdf' }));
+      if (!ventanaPdf) {
+        setError('El navegador bloqueó la pestaña del PDF. Permite ventanas emergentes e inténtalo de nuevo.');
+        return;
+      }
+      ventanaPdf.location.href = url;
+      ventanaPdf.focus();
+    } catch (err) {
+      if (ventanaPdf && !ventanaPdf.closed) ventanaPdf.close();
+      setError('Error al generar el PDF de la orden de servicio');
+    }
+  };
+
+  const handleDescargarVentaPdf = async (ventaId) => {
+    if (!ventaId) return;
+    try {
+      const response = await api.get(`/api/facturas/pdf/${ventaId}`, { responseType: 'blob' });
+      const url = window.URL.createObjectURL(new Blob([response.data], { type: 'application/pdf' }));
       const link = document.createElement('a');
       link.href = url;
-      link.setAttribute('download', `orden-servicio-${ordenId}.pdf`);
+      link.setAttribute('download', `venta-${ventaId}.pdf`);
       document.body.appendChild(link);
       link.click();
       link.parentNode.removeChild(link);
       window.URL.revokeObjectURL(url);
     } catch (err) {
-      setError('Error al generar el PDF de la orden de servicio');
+      setError('Error al descargar la factura de la venta');
     }
   };
 
@@ -206,15 +228,44 @@ export default function OrdenServicio() {
   const handleEntregarOrden = async () => {
     setLoading(true);
     setError("");
+    let ventanaPdf = null;
     try {
+      if (!selectedOrdenEntregarId) return;
+      if (!confirm('Al entregar se facturarán las ventas asociadas. ¿Continuar?')) return;
+      // Debe abrirse dentro del gesto del usuario para que el navegador no bloquee
+      // la pestaña cuando el PDF esté listo tras las peticiones asíncronas.
+      ventanaPdf = window.open('', '_blank');
       await api.put(`/api/servicios-reparacion/${selectedOrdenEntregarId}/entregar`);
       setSuccessMessage(`Orden ${selectedOrdenEntregarId} entregada correctamente`);
+      const ordenEntregadaId = selectedOrdenEntregarId;
       setSelectedOrdenEntregarId("");
-      cargarOrdenesParaEntregar();
+      // refrescar tanto listado, detalle y ventas asociadas
+      await Promise.all([cargarOrdenesParaEntregar(), cargarOrdenes(), cargarOrdenDetalle(ordenEntregadaId), cargarVentasOrden(ordenEntregadaId)]);
+      await handleAbrirPdfEntrega(ordenEntregadaId, ventanaPdf);
     } catch (err) {
-      setError(err.message || err.response?.data || "Error al entregar la orden");
+      if (ventanaPdf && !ventanaPdf.closed) ventanaPdf.close();
+      setError(obtenerMensajeError(err, "Error al entregar la orden"));
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleAbrirPdfEntrega = async (ordenId, ventanaPdf) => {
+    if (!ordenId) return;
+    try {
+      const response = await api.get(`/api/servicios-reparacion/${ordenId}/entrega-pdf`, {
+        responseType: 'blob',
+      });
+      const url = window.URL.createObjectURL(new Blob([response.data], { type: 'application/pdf' }));
+      if (!ventanaPdf) {
+        setError('El navegador bloqueó la pestaña del PDF. Permite ventanas emergentes e inténtalo de nuevo.');
+        return;
+      }
+      ventanaPdf.location.href = url;
+      ventanaPdf.focus();
+    } catch (err) {
+      if (ventanaPdf && !ventanaPdf.closed) ventanaPdf.close();
+      setError('Orden entregada, pero no se pudo generar el documento de entrega (orden + factura).');
     }
   };
 
@@ -256,6 +307,21 @@ export default function OrdenServicio() {
     }
   };
 
+  const cargarOrdenDetalle = async (ordenId) => {
+    if (!ordenId) {
+      setOrdenDetalle(null);
+      return;
+    }
+
+    try {
+      const resp = await api.get(`/api/servicios-reparacion/${ordenId}`);
+      setOrdenDetalle(resp.data || null);
+    } catch (err) {
+      console.error('Error al cargar detalle de la orden:', err);
+      setOrdenDetalle(null);
+    }
+  };
+
   const handleAgregarItemVenta = (productoId) => {
     const producto = productos.find((p) => String(p.id) === String(productoId));
     if (!producto) return;
@@ -286,6 +352,25 @@ export default function OrdenServicio() {
     return ventaItems.reduce((acc, i) => acc + i.cantidad * Number(i.precioUnitario), 0);
   };
 
+  const handleConfirmarPago = async () => {
+    const ventaAbierta = ventasOrden.find((venta) => venta.estado === 'ABIERTA');
+    if (!ventaAbierta) {
+      setError('No hay una venta ABIERTA para confirmar el pago.');
+      return;
+    }
+    setLoading(true);
+    setError("");
+    try {
+      await api.post(`/api/ventas/${ventaAbierta.id}/pagar`);
+      setSuccessMessage(`Venta ${ventaAbierta.id} marcada como PAGADA.`);
+      await cargarVentasOrden(selectedOrdenCierre);
+    } catch (err) {
+      setError(obtenerMensajeError(err, 'No se pudo confirmar el pago'));
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const handleRegistrarVentaOrden = async () => {
     const ordenSeleccionada = ordenesTecnico.find((o) => o.id === selectedOrdenCierre);
     if (!ordenSeleccionada?.clienteId || !ordenSeleccionada?.clienteTipoDocumentoId) {
@@ -300,6 +385,12 @@ export default function OrdenServicio() {
     setLoading(true);
     setError("");
     try {
+      // validar que la orden no haya sido entregada según backend
+      if (ordenDetalle && ordenDetalle.entregado) {
+        setError('No puede registrar ventas: orden entregada.');
+        setLoading(false);
+        return;
+      }
       for (const item of ventaItems) {
         if (!item.productId) {
           setError("Todos los productos deben tener un ID válido");
@@ -324,12 +415,11 @@ export default function OrdenServicio() {
         }
       }
 
-      const response = await api.post("/api/ventas/registrar", {
+      const response = await api.post(`/api/ventas/orden/${selectedOrdenCierre}/agregar-detalles`, {
         codigoSede: ordenSeleccionada.codigoSede,
         clienteId: ordenSeleccionada.clienteId,
         clienteTipoDocumento: ordenSeleccionada.clienteTipoDocumentoId,
         observaciones: ventaObservaciones,
-        ordenDeServicioId: selectedOrdenCierre || null,
         detalles: ventaItems.map((i) => ({
           productId: i.productId,
           tipoItem: "PRODUCTO",
@@ -337,15 +427,20 @@ export default function OrdenServicio() {
           precioUnitario: i.precioUnitario,
         })),
       });
-      const totalVenta = parseFloat(response.data?.totalVenta || 0);
-      setSuccessMessage(`¡Venta registrada exitosamente! Total: $${totalVenta.toFixed(2)}`);
+      const resultado = response.data;
+      setSuccessMessage(`Productos agregados a ${resultado?.id || 'la venta'} (${resultado?.estado || 'ABIERTA'}).`);
       setVentaItems([]);
       setVentaObservaciones("");
       setVentaProductoBuscado("");
-      cargarVentasOrden(selectedOrdenCierre);
+      // refrescar ventas y detalle de orden
+      await Promise.all([cargarVentasOrden(selectedOrdenCierre), cargarOrdenDetalle(selectedOrdenCierre)]);
     } catch (err) {
-      const msg = err.message || err.response?.data || "Error al registrar la venta";
-      setError(msg);
+      const backendMsg = obtenerMensajeError(err, 'Error al registrar la venta');
+      if (err.response?.status === 400 || err.response?.status === 409) {
+        setError(backendMsg || 'No puede registrar ventas: orden entregada.');
+      } else {
+        setError(backendMsg || 'Error al registrar la venta');
+      }
     } finally {
       setLoading(false);
     }
@@ -417,7 +512,8 @@ export default function OrdenServicio() {
 
     const ordenSeleccionada = ordenesTecnico.find((o) => o.id === selectedOrdenCierre);
     if (!ordenSeleccionada) return;
-
+    // cargar detalle y ventas asociadas cuando cambie la orden seleccionada
+    cargarOrdenDetalle(selectedOrdenCierre);
     cargarVentasOrden(selectedOrdenCierre);
 
     setCierreForm({
@@ -892,6 +988,11 @@ export default function OrdenServicio() {
     { key: "electrodomesticoTipo", label: "Electrodoméstico" },
     { key: "tipoServicio", label: "Tipo" },
     {
+      key: "tecnicoAsignadoNombre",
+      label: "Técnico Asignado",
+      render: (row) => row.tecnicoAsignadoNombre || row.tecnicoAsignadoUsername || "-"
+    },
+    {
       key: "estado",
       label: "Estado",
       render: (row) => {
@@ -930,14 +1031,8 @@ export default function OrdenServicio() {
       render: (row) => (
         <div className="flex justify-end">
           <ActionMenu
-            canEdit={can('ordenes.edit')}
-            canDelete={can('ordenes.delete')}
-            canPrint={can('ordenes.print')}
-            canVoid={can('ordenes.void')}
+            canPrint={hasPermission('orders.pdf')}
             onPrint={() => handleDescargarOrdenPdf(row.id)}
-            onVoid={() => handleAnularOrden(row.id)}
-            onEdit={() => {/* abrir edicion orden - pendiente */}}
-            onDelete={() => {/* eliminar orden - pendiente */}}
           />
         </div>
       )
@@ -951,7 +1046,7 @@ export default function OrdenServicio() {
 
         {error && (
           <div className="mb-4 p-4 bg-red-50 border border-red-200 rounded-lg text-red-700">
-            {error}
+            {String(error)}
             <button
               onClick={() => setError("")}
               className="ml-4 text-sm underline"
@@ -980,7 +1075,7 @@ export default function OrdenServicio() {
           >
             Listar
           </button>
-          {can('orders.create') && (
+          {hasPermission('orders.create') && (
             <button
               onClick={() => {
                 setActiveView("CREAR");
@@ -994,7 +1089,7 @@ export default function OrdenServicio() {
               Crear Orden
             </button>
           )}
-          {can('orders.assign_tech') && (
+          {hasPermission('orders.assign_tech') && (
             <button
               onClick={() => {
                 setActiveView("ASIGNAR");
@@ -1488,7 +1583,7 @@ export default function OrdenServicio() {
               Registrar Venta
             </h3>
 
-            {!can('sales.create') ? (
+            {!hasPermission('sales.create') ? (
               <div className="rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-700">
                 Tu rol no tiene permiso para adjuntar ventas a esta orden.
               </div>
@@ -1518,7 +1613,7 @@ export default function OrdenServicio() {
                 );
               })()}
 
-              {/* Agregar producto */}
+              {/* Agregar producto (restaurado): búsqueda por código / buscador */}
               <div>
                 <label className="block text-xs font-semibold text-gray-700 mb-1">
                   Código de producto
@@ -1552,6 +1647,31 @@ export default function OrdenServicio() {
                   </button>
                 </div>
                 <p className="text-[11px] text-gray-500 mt-1">Enter agrega por ID · F2 o "Buscar" abre el buscador</p>
+              </div>
+
+              {/* Acción: Registrar Venta / Confirmar Pago (reubicados) */}
+              <div className="space-y-3 mt-3">
+                <div>
+                  <button
+                    onClick={handleRegistrarVentaOrden}
+                    disabled={loading || ventaItems.length === 0}
+                    className="w-full py-2 bg-green-600 text-white rounded-lg text-sm font-medium hover:bg-green-700 disabled:opacity-50"
+                  >
+                    {loading ? "Registrando..." : "Registrar Venta"}
+                  </button>
+                </div>
+                <div>
+                  {ventasOrden.some((venta) => venta.estado === 'ABIERTA') && (
+                    <button
+                      type="button"
+                      onClick={handleConfirmarPago}
+                      disabled={loading}
+                      className="w-full py-2 bg-amber-600 text-white rounded-lg text-sm font-medium hover:bg-amber-700 disabled:opacity-50"
+                    >
+                      Confirmar pago
+                    </button>
+                  )}
+                </div>
               </div>
 
               {/* Tabla de ítems a registrar */}
@@ -1636,39 +1756,18 @@ export default function OrdenServicio() {
                   className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
                 />
               </div>
-
-              <button
-                onClick={handleRegistrarVentaOrden}
-                disabled={loading || ventaItems.length === 0}
-                className="w-full py-2 bg-green-600 text-white rounded-lg text-sm font-medium hover:bg-green-700 disabled:opacity-50"
-              >
-                {loading ? "Registrando..." : "Registrar Venta"}
-              </button>
               </>
             )}
             {/* ───────────────── PANEL SUPERIOR: VENTAS DE LA ORDEN ───────────────── */}
         <div className="bg-gray-50 border border-gray-200 rounded-xl p-4">
           <div className="flex items-center justify-between mb-4">
             <h3 className="text-lg font-semibold text-gray-800">
-              Ventas Asociadas a la Orden
+              Productos asociados a la orden
             </h3>
 
             <div className="flex items-center gap-3">
               {loadingVentasOrden && (
                 <span className="text-sm text-gray-500">Cargando ventas...</span>
-              )}
-              {selectedOrdenCierre && can('orders.pdf') && (
-                <button
-                  type="button"
-                  onClick={() => handleDescargarOrdenPdf(selectedOrdenCierre)}
-                  className="flex items-center gap-1.5 px-3 py-1.5 bg-blue-600 text-white text-xs font-medium rounded-lg hover:bg-blue-700"
-                >
-                  <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
-                      d="M12 10v6m0 0l-3-3m3 3l3-3M3 17V7a2 2 0 012-2h6l2 2h4a2 2 0 012 2v8a2 2 0 01-2 2H5a2 2 0 01-2-2z" />
-                  </svg>
-                  IMPRIMIR FACTURA
-                </button>
               )}
             </div>
           </div>
@@ -1684,9 +1783,9 @@ export default function OrdenServicio() {
               <table className="w-full text-sm">
                 <thead className="bg-gray-100 border-b border-gray-200">
                   <tr>
-                    <th className="px-3 py-2 text-left font-semibold text-gray-700">
-                      Producto
-                    </th>
+                    <th className="px-3 py-2 text-left font-semibold text-gray-700">Venta ID</th>
+                    <th className="px-3 py-2 text-left font-semibold text-gray-700">Producto</th>
+                    <th className="px-3 py-2 text-left font-semibold text-gray-700">Estado</th>
                     <th className="px-3 py-2 text-center font-semibold text-gray-700">
                       Cantidad
                     </th>
@@ -1696,14 +1795,19 @@ export default function OrdenServicio() {
                     <th className="px-3 py-2 text-right font-semibold text-gray-700">
                       Subtotal
                     </th>
+                    <th className="px-3 py-2 text-center font-semibold text-gray-700">Acciones</th>
                   </tr>
                 </thead>
 
                 <tbody className="divide-y divide-gray-100">
                   {detallesVentasOrden.map((item, idx) => (
                     <tr key={`${item.ventaId}-${idx}`}>
+                      <td className="px-3 py-2 text-xs text-gray-600">{item.ventaId}</td>
                       <td className="px-3 py-2 text-gray-800">
                         {item.producto}
+                      </td>
+                      <td className="px-3 py-2 text-sm text-center">
+                        {ventasOrden.find(v => v.id === item.ventaId)?.estado || 'ABIERTA'}
                       </td>
                       <td className="px-3 py-2 text-center">
                         {item.cantidad}
@@ -1714,26 +1818,29 @@ export default function OrdenServicio() {
                       <td className="px-3 py-2 text-right font-medium">
                         ${item.subtotal.toFixed(2)}
                       </td>
+                      <td className="px-3 py-2 text-center">
+                        <div className="flex items-center justify-center gap-2">
+                          {ventasOrden.find(v => v.id === item.ventaId)?.estado === 'FACTURADA' ? (
+                            <button onClick={() => handleDescargarVentaPdf(item.ventaId)} className="text-blue-600 text-xs px-2 py-1 rounded hover:bg-blue-50">Factura</button>
+                          ) : (
+                            <span className="text-xs text-gray-400">—</span>
+                          )}
+                        </div>
+                      </td>
                     </tr>
                   ))}
                 </tbody>
-
-                <tfoot className="bg-gray-100 border-t border-gray-300">
+                <tfoot className="bg-gray-50 border-t border-gray-200">
                   <tr>
-                    <td
-                      colSpan="3"
-                      className="px-3 py-3 text-right font-semibold text-gray-800"
-                    >
-                      TOTAL GENERAL
-                    </td>
-                    <td className="px-3 py-3 text-right font-bold text-green-700">
-                      ${totalGeneralVentasOrden.toFixed(2)}
-                    </td>
+                    <td colSpan="6" className="px-3 py-2 text-right text-sm font-semibold text-gray-700">TOTAL GENERAL:</td>
+                    <td className="px-3 py-2 text-right text-sm font-bold text-green-600">${totalGeneralVentasOrden.toFixed(2)}</td>
                   </tr>
                 </tfoot>
               </table>
             </div>
           )}
+
+          {/* Botones movidos arriba al panel de Registrar Venta para evitar duplicados */}
         </div>
           </div>
         </div>
@@ -1779,20 +1886,6 @@ export default function OrdenServicio() {
             >
               {loading ? "Procesando..." : "Confirmar Entrega"}
             </button>
-
-            {selectedOrdenEntregarId && can('orders.pdf') && (
-              <button
-                type="button"
-                onClick={() => handleDescargarOrdenPdf(selectedOrdenEntregarId)}
-                className="mt-2 w-full py-2 bg-blue-600 text-white rounded-lg font-medium hover:bg-blue-700 flex items-center justify-center gap-2"
-              >
-                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
-                    d="M12 10v6m0 0l-3-3m3 3l3-3M3 17V7a2 2 0 012-2h6l2 2h4a2 2 0 012 2v8a2 2 0 01-2 2H5a2 2 0 01-2-2z" />
-                </svg>
-                Descargar PDF de la Orden
-              </button>
-            )}
           </div>
         )}
 

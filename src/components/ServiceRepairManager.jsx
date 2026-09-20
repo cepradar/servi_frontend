@@ -3,6 +3,7 @@ import api from './utils/axiosConfig.jsx';
 import { PencilIcon, TrashIcon, PlusIcon } from '@heroicons/react/24/outline';
 import ActionMenu from './common/ActionMenu';
 import DataTable from './DataTable';
+import { usePermissions } from './utils/PermissionsContext';
 
 export default function ServiceRepairManager() {
   const [services, setServices] = useState([]);
@@ -21,6 +22,9 @@ export default function ServiceRepairManager() {
     costoRepuestos: '',
     estado: 'PENDIENTE'
   });
+
+  const { permissions } = usePermissions();
+  const can = (c) => permissions.includes(c);
 
   useEffect(() => {
     fetchServices();
@@ -302,10 +306,13 @@ export default function ServiceRepairManager() {
           { key: 'electrodomesticoMarca', label: 'Aparato', sortable: true, filterable: true },
           { key: 'tipoServicio', label: 'Tipo', sortable: true, filterable: true },
           { key: 'estado', label: 'Estado', sortable: true, filterable: true },
-          { key: 'totalCosto', label: 'Costo', sortable: true, filterable: false },
-          {
+          { key: 'totalCosto', label: 'Costo', sortable: true, filterable: true },
+          ...((can('servicios.edit') || can('servicios.delete')) ? [{
             key: 'acciones',
-            label: 'Acciones',
+            label: '',
+            width: 44,
+            headerClassName: 'px-1',
+            cellClassName: 'px-1',
             noMenu: true,
             sortable: false,
             filterable: false,
@@ -314,12 +321,12 @@ export default function ServiceRepairManager() {
                 <ActionMenu
                   onEdit={() => handleEdit(service)}
                   onDelete={() => handleDelete(service.id)}
-                  canEdit={true}
-                  canDelete={true}
+                  canEdit={can('servicios.edit')}
+                  canDelete={can('servicios.delete')}
                 />
               </div>
             )
-          }
+          }] : [])
         ]}
       />
     </div>

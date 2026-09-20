@@ -74,18 +74,13 @@ const SalesModule = () => {
 
   const descargarVentaPdf = async (ventaId) => {
     try {
-      const resp = await api.get(`/api/ventas/${ventaId}/pdf`, { responseType: 'blob' });
-      const url = window.URL.createObjectURL(new Blob([resp.data]));
-      const link = document.createElement('a');
-      link.href = url;
-      link.setAttribute('download', `venta_${ventaId}.pdf`);
-      document.body.appendChild(link);
-      link.click();
-      link.parentNode.removeChild(link);
-      window.URL.revokeObjectURL(url);
+      const resp = await api.get(`/api/facturas/pdf/${ventaId}`, { responseType: 'blob' });
+      const url = URL.createObjectURL(new Blob([resp.data], { type: 'application/pdf' }));
+      // Abre en una pestaña nueva usando el visor nativo del navegador (imprimir/descargar incluidos)
+      window.open(url, '_blank', 'noopener,noreferrer');
     } catch (err) {
-      console.error('Error descargando PDF de venta', err);
-      setError('No se pudo descargar el PDF de la venta');
+      console.error('Error mostrando la factura de la venta', err);
+      setError('No se pudo mostrar la factura de la venta');
     }
   };
 
@@ -472,6 +467,35 @@ const SalesModule = () => {
     });
   };
 
+  const describirProductos = (detalles) => {
+    if (!Array.isArray(detalles) || detalles.length === 0) return "-";
+    return detalles.map((d) => d.productNombre || "(sin nombre)").join(", ");
+  };
+
+  const sumarCantidades = (detalles) => {
+    if (!Array.isArray(detalles) || detalles.length === 0) return "-";
+    return detalles.reduce((total, d) => total + (Number(d.cantidad) || 0), 0);
+  };
+
+  const describirPrecioUnitario = (detalles) => {
+    if (!Array.isArray(detalles) || detalles.length === 0) return "-";
+    if (detalles.length === 1) {
+      const precio = detalles[0].precioUnitario;
+      return precio != null ? `$${precio}` : "-";
+    }
+    return "Múltiples";
+  };
+
+  const estadoBadgeClass = (estado) => {
+    switch (estado) {
+      case "ABIERTA": return "bg-amber-100 text-amber-700";
+      case "PAGADA": return "bg-blue-100 text-blue-700";
+      case "FACTURADA": return "bg-green-100 text-green-700";
+      case "ANULADA": return "bg-red-100 text-red-700";
+      default: return "bg-gray-100 text-gray-600";
+    }
+  };
+
   const calcularTotal = () => {
     return formulario.items
       .reduce((total, item) => total + (parseFloat(item.cantidad || 0) * parseFloat(item.precioUnitario || 0)), 0)
@@ -806,6 +830,15 @@ const SalesModule = () => {
               data={ventas}
               columns={[
                     {
+                      key: "id",
+                      label: "ID Venta",
+                      sortable: true,
+                      filterable: true,
+                      render: (venta) => (
+                        <span className="font-mono text-xs text-gray-700">{venta.id || "-"}</span>
+                      )
+                    },
+                    {
                       key: "fecha",
                       label: "Fecha",
                       sortable: true,
@@ -815,9 +848,9 @@ const SalesModule = () => {
                     {
                       key: "productNombre",
                       label: "Producto",
-                      sortable: true,
+                      sortable: false,
                       filterable: true,
-                      render: (venta) => venta.productNombre || "-"
+                      render: (venta) => describirProductos(venta.detalles)
                     },
                     {
                       key: "nombreComprador",
@@ -829,17 +862,16 @@ const SalesModule = () => {
                     {
                       key: "cantidad",
                       label: "Cantidad",
-                      sortable: true,
+                      sortable: false,
                       filterable: false,
-                      render: (venta) => venta.cantidad ?? "-"
+                      render: (venta) => sumarCantidades(venta.detalles)
                     },
                     {
                       key: "precioUnitario",
                       label: "Precio Unit.",
-                      sortable: true,
+                      sortable: false,
                       filterable: false,
-                      render: (venta) =>
-                        venta.precioUnitario != null ? `$${venta.precioUnitario}` : "-"
+                      render: (venta) => describirPrecioUnitario(venta.detalles)
                     },
                     {
                       key: "totalVenta",
@@ -849,6 +881,17 @@ const SalesModule = () => {
                       render: (venta) => (
                         <span className="font-semibold text-green-600">
                           {venta.totalVenta != null ? `$${venta.totalVenta}` : "-"}
+                        </span>
+                      )
+                    },
+                    {
+                      key: "estado",
+                      label: "Estado",
+                      sortable: true,
+                      filterable: true,
+                      render: (venta) => (
+                        <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${estadoBadgeClass(venta.estado)}`}>
+                          {venta.estado || "-"}
                         </span>
                       )
                     },
@@ -867,14 +910,10 @@ const SalesModule = () => {
                       render: (venta) => (
                         <div className="flex justify-end">
                           <ActionMenu
-                            canEdit={can('ventas.edit')}
-                            canDelete={can('ventas.delete')}
-                            canPrint={can('ventas.print')}
-                            canVoid={can('ventas.void')}
+                            canPrint={can('sales.invoice.pdf')}
+                            canVoid={can('sales.delete') && venta.estado !== 'FACTURADA'}
                             onPrint={() => descargarVentaPdf(venta.id)}
                             onVoid={() => anularVenta(venta.id)}
-                            onEdit={() => {/* abrir editar venta - pendiente */}}
-                            onDelete={() => {/* eliminar venta - pendiente */}}
                           />
                         </div>
                       )

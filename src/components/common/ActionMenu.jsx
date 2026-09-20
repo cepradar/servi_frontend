@@ -25,7 +25,7 @@ export default function ActionMenu({ onEdit, onDelete, onPrint, onVoid, canEdit 
         aria-haspopup="menu"
         aria-expanded={open}
         aria-label={ariaLabel}
-        className="p-1 rounded hover:bg-gray-100 transition-colors"
+        className="h-8 w-8 p-1 rounded flex items-center justify-center hover:bg-gray-100 transition-colors"
         title="Opciones"
       >
         <EllipsisVerticalIcon className="h-4 w-4 text-gray-600" />
@@ -33,7 +33,7 @@ export default function ActionMenu({ onEdit, onDelete, onPrint, onVoid, canEdit 
 
       {open && (() => {
         const rect = ref.current?.getBoundingClientRect();
-        const menuWidth = 160;
+        const menuWidth = 140;
         const top = rect ? (rect.bottom + window.scrollY + 6) : undefined;
         const left = rect ? (rect.right + window.scrollX - menuWidth) : undefined;
 
@@ -68,8 +68,7 @@ export default function ActionMenu({ onEdit, onDelete, onPrint, onVoid, canEdit 
                   <TrashIcon className="h-4 w-4 text-red-500" /> Eliminar
                 </button>
               )}
-
-              {(!canEdit && !canDelete) && (
+              {( !canEdit && !canDelete && !canPrint && !canVoid ) && (
                 <div className="px-3 py-2 text-xs text-gray-500">Sin acciones disponibles</div>
               )}
             </div>

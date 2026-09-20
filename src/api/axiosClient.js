@@ -29,6 +29,7 @@ axiosClient.interceptors.request.use(
 
     const token = localStorage.getItem('authToken');
     if (token) {
+      config.headers = config.headers || {};
       config.headers['Authorization'] = `Bearer ${token}`;
     }
     return config;
@@ -46,6 +47,17 @@ axiosClient.interceptors.response.use(
     const status = error.response?.status;
 
     if (status === 401) {
+      const isSaleOperation = error.config?.url?.includes('/api/ventas/orden/');
+      if (isSaleOperation) {
+        const enhanced = new Error(
+          'La sesión no es válida para registrar productos. Cierra sesión e inicia sesión nuevamente.'
+        );
+        enhanced.status = 401;
+        enhanced.originalError = error;
+        console.error('[axios] 401 en operación de venta; se conserva el diagnóstico.', error.config?.url);
+        return Promise.reject(enhanced);
+      }
+
       // Token expirado o inválido → limpiar sesión y redirigir al login
       localStorage.removeItem('authToken');
       localStorage.removeItem('userRole');

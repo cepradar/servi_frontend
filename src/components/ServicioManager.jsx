@@ -2,6 +2,8 @@ import React, { useState, useEffect, useCallback } from 'react';
 import api from './utils/axiosConfig';
 import { usePermissions } from './utils/PermissionsContext';
 import { PencilIcon, TrashIcon, PlusIcon, XMarkIcon, CheckIcon } from '@heroicons/react/24/outline';
+import ActionMenu from './common/ActionMenu';
+import DataTable from './DataTable';
 
 const CATEGORIAS = ['DIAGNOSTICO', 'MANTENIMIENTO', 'REPARACION', 'INSTALACION', 'REVISION', 'OTRO'];
 
@@ -147,7 +149,6 @@ export default function ServicioManager() {
   return (
     <div className="p-4 max-w-5xl mx-auto">
       <div className="flex items-center justify-between mb-4">
-        <h1 className="text-xl font-bold text-gray-800">Gestión de Servicios</h1>
         {can('services.create') && (
           <button
             onClick={handleNew}
@@ -257,75 +258,53 @@ export default function ServicioManager() {
           No hay servicios registrados. {can('services.create') && 'Crea el primero con el botón "Nuevo Servicio".'}
         </div>
       ) : (
-        <div className="bg-white border border-gray-200 rounded-xl shadow-sm overflow-hidden">
-          <table className="w-full text-sm">
-            <thead className="bg-gray-50 border-b border-gray-200">
-              <tr>
-                <th className="px-3 py-2 text-left text-xs font-semibold text-gray-600">Código</th>
-                <th className="px-3 py-2 text-left text-xs font-semibold text-gray-600">Nombre</th>
-                <th className="px-3 py-2 text-left text-xs font-semibold text-gray-600">Categoría</th>
-                <th className="px-3 py-2 text-left text-xs font-semibold text-gray-600">Electrodoméstico</th>
-                <th className="px-3 py-2 text-right text-xs font-semibold text-gray-600">Precio Base</th>
-                <th className="px-3 py-2 text-center text-xs font-semibold text-gray-600">Garantía</th>
-                <th className="px-3 py-2 text-center text-xs font-semibold text-gray-600">Estado</th>
-                {(can('services.update') || can('services.delete')) && (
-                  <th className="px-3 py-2 text-center text-xs font-semibold text-gray-600">Acciones</th>
-                )}
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-gray-100">
-              {servicios.map((s) => (
-                <tr key={s.id} className="hover:bg-gray-50 transition">
-                  <td className="px-3 py-2 font-mono text-xs text-gray-600">{s.codigo}</td>
-                  <td className="px-3 py-2 font-medium text-gray-800">
-                    {s.nombre}
-                    {s.descripcion && <p className="text-xs text-gray-400 mt-0.5 truncate max-w-xs">{s.descripcion}</p>}
-                  </td>
-                  <td className="px-3 py-2">
-                    <span className={`inline-block px-2 py-0.5 rounded-full text-xs font-medium ${CATEGORIA_COLORS[s.categoriaServicio] || 'bg-gray-100 text-gray-700'}`}>
-                      {s.categoriaServicio}
-                    </span>
-                  </td>
-                  <td className="px-3 py-2 text-xs text-gray-600">
-                    {s.categoriaElectrodomesticoNombre || <span className="text-gray-300">—</span>}
-                  </td>
-                  <td className="px-3 py-2 text-right text-gray-700">
-                    {new Intl.NumberFormat('es-CO', { style: 'currency', currency: 'COP', minimumFractionDigits: 0 }).format(s.precioBase)}
-                  </td>
-                  <td className="px-3 py-2 text-center text-gray-600">{s.garantiaDias ?? 30} días</td>
-                  <td className="px-3 py-2 text-center">
-                    <span className={`inline-block px-2 py-0.5 rounded-full text-xs font-medium ${s.activo ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-600'}`}>
-                      {s.activo ? 'Activo' : 'Inactivo'}
-                    </span>
-                  </td>
-                  {(can('services.update') || can('services.delete')) && (
-                    <td className="px-3 py-2">
-                      <div className="flex items-center justify-center gap-1">
-                        {can('services.update') && (
-                          <button onClick={() => handleEdit(s)}
-                            className="p-1 text-blue-600 hover:bg-blue-50 rounded transition" title="Editar">
-                            <PencilIcon className="h-4 w-4" />
-                          </button>
-                        )}
-                        {can('services.update') && s.activo && (
-                          <button onClick={() => handleDesactivar(s.id)}
-                            className="p-1 text-yellow-600 hover:bg-yellow-50 rounded transition text-xs font-medium" title="Desactivar">
-                            OFF
-                          </button>
-                        )}
-                        {can('services.delete') && (
-                          <button onClick={() => handleEliminar(s.id)}
-                            className="p-1 text-red-500 hover:bg-red-50 rounded transition" title="Eliminar">
-                            <TrashIcon className="h-4 w-4" />
-                          </button>
-                        )}
-                      </div>
-                    </td>
-                  )}
-                </tr>
-              ))}
-            </tbody>
-          </table>
+        <div>
+          <DataTable
+            title="Listado de Servicios"
+            data={servicios}
+            columns={[
+              { key: 'codigo', label: 'Código', sortable: true, filterable: true },
+              { key: 'nombre', label: 'Nombre', sortable: true, filterable: true, render: (s) => (
+                <div className="font-medium text-gray-800">
+                  {s.nombre}
+                  {s.descripcion && <p className="text-xs text-gray-400 mt-0.5 truncate max-w-xs">{s.descripcion}</p>}
+                </div>
+              )},
+              { key: 'categoriaServicio', label: 'Categoría', sortable: true, filterable: true, render: (s) => (
+                <span className={`inline-block px-2 py-0.5 rounded-full text-xs font-medium ${CATEGORIA_COLORS[s.categoriaServicio] || 'bg-gray-100 text-gray-700'}`}>
+                  {s.categoriaServicio}
+                </span>
+              )},
+              { key: 'categoriaElectrodomesticoNombre', label: 'Electrodoméstico', sortable: true, filterable: true, render: (s) => s.categoriaElectrodomesticoNombre || '—' },
+              { key: 'precioBase', label: 'Precio Base', sortable: true, filterable: true, render: (s) => new Intl.NumberFormat('es-CO', { style: 'currency', currency: 'COP', minimumFractionDigits: 0 }).format(s.precioBase) },
+              { key: 'garantiaDias', label: 'Garantía', sortable: true, filterable: true, render: (s) => `${s.garantiaDias ?? 30} días` },
+              { key: 'activo', label: 'Estado', sortable: true, filterable: true, render: (s) => (
+                <span className={`inline-block px-2 py-0.5 rounded-full text-xs font-medium ${s.activo ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-600'}`}>
+                  {s.activo ? 'Activo' : 'Inactivo'}
+                </span>
+              )},
+              ...((can('services.update') || can('services.delete')) ? [{
+                key: 'acciones',
+                label: '',
+                width: 44,
+                headerClassName: 'px-1',
+                cellClassName: 'px-1',
+                noMenu: true,
+                sortable: false,
+                filterable: false,
+                render: (s) => (
+                  <div className="flex justify-center items-center gap-1 flex-nowrap">
+                    <ActionMenu
+                      onEdit={() => handleEdit(s)}
+                      onDelete={() => handleEliminar(s.id)}
+                      canEdit={can('services.update')}
+                      canDelete={can('services.delete')}
+                    />
+                  </div>
+                )
+              }] : [])
+            ]}
+          />
         </div>
       )}
     </div>
