@@ -73,15 +73,17 @@ export default function DataTable({
     Object.keys(columnFilters).forEach(key => {
       const filterValue = columnFilters[key];
       if (filterValue) {
+        const column = columns.find(c => c.key === key);
         result = result.filter(item => {
-          const value = String(item[key] || '').toLowerCase();
+          const raw = column?.filterText ? column.filterText(item) : item[key];
+          const value = String(raw || '').toLowerCase();
           return value.includes(filterValue.toLowerCase());
         });
       }
     });
 
     return result;
-  }, [data, columnFilters]);
+  }, [data, columnFilters, columns]);
 
   // Aplicar ordenamiento
   const sortedData = useMemo(() => {

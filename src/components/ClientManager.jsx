@@ -542,7 +542,8 @@ export default function ClientManager() {
               key: 'fechaCreacion',
               label: 'Fecha de Ingreso',
               sortable: true,
-              filterable: false,
+              filterable: true,
+              filterText: (client) => client.fechaCreacion ? new Date(client.fechaCreacion).toLocaleDateString() : '',
               render: (client) => client.fechaCreacion ? new Date(client.fechaCreacion).toLocaleDateString() : '-'
             },
             {
