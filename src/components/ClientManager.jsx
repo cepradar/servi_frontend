@@ -539,6 +539,13 @@ export default function ClientManager() {
             { key: 'telefono', label: 'Teléfono', sortable: true, filterable: true },
             { key: 'email', label: 'Email', sortable: true, filterable: true },
             {
+              key: 'fechaCreacion',
+              label: 'Fecha de Ingreso',
+              sortable: true,
+              filterable: false,
+              render: (client) => client.fechaCreacion ? new Date(client.fechaCreacion).toLocaleDateString() : '-'
+            },
+            {
               key: 'acciones',
               label: '',
               width: 44,

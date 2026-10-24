@@ -15,6 +15,7 @@ import { BuildingOffice2Icon } from '@heroicons/react/24/outline';
 export default function OrdenServicio() {
   const { sedes, sedeActual } = useSedes();
   const { hasPermission } = usePermissions();
+  const can = hasPermission;
 
   const obtenerMensajeError = (error, mensajePredeterminado = 'Ocurrió un error') => {
     const datos = error?.response?.data;
@@ -178,22 +179,25 @@ export default function OrdenServicio() {
 
   const handleDescargarOrdenPdf = async (ordenId) => {
     if (!ordenId) return;
-    const ventanaPdf = window.open('', '_blank');
     try {
       const response = await api.get(`/api/servicios-reparacion/${ordenId}/pdf`, {
         responseType: 'blob',
       });
-      const url = window.URL.createObjectURL(new Blob([response.data], { type: 'application/pdf' }));
-      if (!ventanaPdf) {
-        setError('El navegador bloqueó la pestaña del PDF. Permite ventanas emergentes e inténtalo de nuevo.');
-        return;
-      }
-      ventanaPdf.location.href = url;
-      ventanaPdf.focus();
+      descargarBlobPdf(response.data, `orden-servicio-${ordenId}.pdf`);
     } catch (err) {
-      if (ventanaPdf && !ventanaPdf.closed) ventanaPdf.close();
       setError('Error al generar el PDF de la orden de servicio');
     }
+  };
+
+  const descargarBlobPdf = (data, nombre) => {
+    const url = window.URL.createObjectURL(new Blob([data], { type: 'application/pdf' }));
+    const link = document.createElement('a');
+    link.href = url;
+    link.setAttribute('download', nombre);
+    document.body.appendChild(link);
+    link.click();
+    link.parentNode.removeChild(link);
+    window.URL.revokeObjectURL(url);
   };
 
   const handleDescargarVentaPdf = async (ventaId) => {
@@ -228,44 +232,25 @@ export default function OrdenServicio() {
   const handleEntregarOrden = async () => {
     setLoading(true);
     setError("");
-    let ventanaPdf = null;
     try {
       if (!selectedOrdenEntregarId) return;
       if (!confirm('Al entregar se facturarán las ventas asociadas. ¿Continuar?')) return;
-      // Debe abrirse dentro del gesto del usuario para que el navegador no bloquee
-      // la pestaña cuando el PDF esté listo tras las peticiones asíncronas.
-      ventanaPdf = window.open('', '_blank');
-      await api.put(`/api/servicios-reparacion/${selectedOrdenEntregarId}/entregar`);
-      setSuccessMessage(`Orden ${selectedOrdenEntregarId} entregada correctamente`);
       const ordenEntregadaId = selectedOrdenEntregarId;
+      await api.put(`/api/servicios-reparacion/${ordenEntregadaId}/entregar`);
+      setSuccessMessage(`Orden ${ordenEntregadaId} entregada correctamente`);
       setSelectedOrdenEntregarId("");
+      try {
+        const pdfResponse = await api.get(`/api/servicios-reparacion/${ordenEntregadaId}/pdf-entrega`, { responseType: 'blob' });
+        descargarBlobPdf(pdfResponse.data, `entrega-${ordenEntregadaId}.pdf`);
+      } catch (pdfErr) {
+        setError('La orden fue entregada, pero no se pudo generar el PDF de entrega');
+      }
       // refrescar tanto listado, detalle y ventas asociadas
       await Promise.all([cargarOrdenesParaEntregar(), cargarOrdenes(), cargarOrdenDetalle(ordenEntregadaId), cargarVentasOrden(ordenEntregadaId)]);
-      await handleAbrirPdfEntrega(ordenEntregadaId, ventanaPdf);
     } catch (err) {
-      if (ventanaPdf && !ventanaPdf.closed) ventanaPdf.close();
       setError(obtenerMensajeError(err, "Error al entregar la orden"));
     } finally {
       setLoading(false);
-    }
-  };
-
-  const handleAbrirPdfEntrega = async (ordenId, ventanaPdf) => {
-    if (!ordenId) return;
-    try {
-      const response = await api.get(`/api/servicios-reparacion/${ordenId}/entrega-pdf`, {
-        responseType: 'blob',
-      });
-      const url = window.URL.createObjectURL(new Blob([response.data], { type: 'application/pdf' }));
-      if (!ventanaPdf) {
-        setError('El navegador bloqueó la pestaña del PDF. Permite ventanas emergentes e inténtalo de nuevo.');
-        return;
-      }
-      ventanaPdf.location.href = url;
-      ventanaPdf.focus();
-    } catch (err) {
-      if (ventanaPdf && !ventanaPdf.closed) ventanaPdf.close();
-      setError('Orden entregada, pero no se pudo generar el documento de entrega (orden + factura).');
     }
   };
 
@@ -514,6 +499,8 @@ export default function OrdenServicio() {
     if (!ordenSeleccionada) return;
     // cargar detalle y ventas asociadas cuando cambie la orden seleccionada
     cargarOrdenDetalle(selectedOrdenCierre);
+    cargarVentasOrden(selectedOrdenCierre);
+
     cargarVentasOrden(selectedOrdenCierre);
 
     setCierreForm({
@@ -990,7 +977,7 @@ export default function OrdenServicio() {
     {
       key: "tecnicoAsignadoNombre",
       label: "Técnico Asignado",
-      render: (row) => row.tecnicoAsignadoNombre || row.tecnicoAsignadoUsername || "-"
+      render: (row) => row.tecnicoAsignadoNombre || "-"
     },
     {
       key: "estado",
@@ -1031,8 +1018,14 @@ export default function OrdenServicio() {
       render: (row) => (
         <div className="flex justify-end">
           <ActionMenu
+            canEdit={hasPermission('ordenes.edit')}
+            canDelete={hasPermission('ordenes.delete')}
             canPrint={hasPermission('orders.pdf')}
+            canVoid={hasPermission('ordenes.void')}
             onPrint={() => handleDescargarOrdenPdf(row.id)}
+            onVoid={() => handleAnularOrden(row.id)}
+            onEdit={() => {/* abrir edicion orden - pendiente */}}
+            onDelete={() => {/* eliminar orden - pendiente */}}
           />
         </div>
       )
@@ -1755,6 +1748,9 @@ export default function OrdenServicio() {
                   rows="2"
                   className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
                 />
+              </div>
+              <div className="flex gap-2">
+                
               </div>
               </>
             )}
